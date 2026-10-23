@@ -1,15 +1,19 @@
 # Handoff
 
-1. **Onde parei** — spec 002, T7: criar o banco Supabase e aplicar migration + seed. T1–T6 prontas e verificadas.
-2. **Commitado** — nada. Tudo no working tree da `main` (`git status`). `.env` foi tirado do índice (`git rm --cached`).
-3. **Banco local** — nada aplicado. Containers `empresti-db` e `empresti-auth` (Docker) estão parados; só serviram de teste.
-4. **Publicado** — nada. Sem projeto Supabase e sem projeto Vercel.
+1. **Onde parei** — spec 002 completa (T1–T8). Falta só fechar o signup e aprovar o DDL `harden` (item 6).
+2. **Commitado** — `main` no remote `ejcivic` (github.com/ej8civic/emprestai-app).
+3. **Banco remoto** — projeto Supabase "school stuff" (`ggigxandixmotjktibgt`, us-east-1). Migration `20261023000000_init` aplicada; seed rodado (1 tenant, 8 usuários, 12 itens, 8 empréstimos). Login real testado.
+4. **Publicado** — https://emprestai-app.vercel.app (projeto Vercel `emprestai-app`, conta pessoal, deploy por upload da CLI; sem git conectado). Variáveis em production e preview; DATABASE_URL e DIRECT_URL como sensíveis.
 5. **NÃO fazer**
-   - Não usar o `.env`: o projeto `vmlnbyldrcfzvxgcrdrc` foi apagado (o DNS não resolve).
-   - O `.env` entrou no git no commit `5dc2065` com a senha do banco. Trocar a senha do projeto antigo, se ainda existir algum.
-   - Não escrever ADR: `docs/adr/002-layout.md` está contrariado pelo redesign Vercel/Turborepo; o time decide a ADR nova.
-   - Não pôr `unsafe-inline` na CSP. Radix não serve (usa `style.cssText`); o diálogo é `<dialog>` nativo.
-   - Não reaproveitar `.seed-credentials.local-dev.txt`: são senhas do banco de teste local.
-6. **Verificado local** — `npx tsc --noEmit` limpo; `npx vitest run` 28/28 (Docker ligado); `node e2e/smoke.mjs` 19/19, sem violação de CSP.
-7. **Exceção desta sessão** — a pessoa autorizou, só para esta tarefa, deploy na Vercel e uso do Supabase remoto (contraria `rules/restrictions.md`, que segue valendo).
-8. **Próximo passo** — com um projeto Supabase novo (região `sa-east-1`): preencher `.env.local`, rodar `npx prisma migrate deploy` e `npm run db:seed`, criar o projeto na Vercel, pôr as 4 variáveis (`.env.example`) em production e preview, e fazer o deploy.
+   - Não editar a migration `init`: já está no banco. Mudança de schema = migration nova, com o DDL mostrado antes (`rules/migration.md`).
+   - Não escrever ADR: `docs/adr/002-layout.md` está contrariado pelo redesign; o time decide.
+   - Não pôr `unsafe-inline` na CSP. O diálogo é `<dialog>` nativo porque o Radix usa `style.cssText`.
+   - Não confundir `.seed-credentials.txt` (banco remoto) com `.seed-credentials.local-dev.txt` (teste local). Ambos ignorados pelo git.
+   - Senha do banco tem `@`: na URL vai como `%40`.
+6. **Pendências de segurança no Supabase**
+   - Signup está ABERTO (`disable_signup:false`); o ADR-001 exige fechado. Só pelo painel: Authentication > Sign In / Providers.
+   - `_prisma_migrations` sem RLS e `audit_log_append_only` sem `search_path`: migration `harden` proposta, aguardando aprovação do DDL.
+   - Proteção contra senha vazada: painel (depende do plano).
+7. **Verificado** — `tsc` limpo; `vitest` 28/28; `e2e/smoke.mjs` 19/19 (stack local); `e2e/live-check.mjs` 7/7 na URL pública (só leitura; NÃO rodar o smoke completo em produção: ele cadastra e empresta de verdade); bundle do cliente sem segredo.
+8. **Exceção desta sessão** — deploy e Supabase remoto autorizados só para esta tarefa (`rules/restrictions.md` segue valendo).
+9. **Próximo passo** — fechar o signup no painel do Supabase; aprovar o DDL `harden`; depois conectar o repositório na Vercel para o push publicar (hoje o deploy é manual: `npx vercel deploy --prod`).
