@@ -13,12 +13,18 @@ Negócio em docs/PRD.md. Stack decidida em docs/adr/001-stack.md.
 
 ## Comandos
 
-- subir o banco local: ainda não há — nenhum comando de app foi rodado nesta máquina
-- rodar o projeto: ainda não há — nenhum comando de app foi rodado nesta máquina
-- rodar os testes: ainda não há — nenhum comando de app foi rodado nesta máquina
-- buildar: ainda não há — nenhum comando de app foi rodado nesta máquina
+Todos já rodados nesta máquina (Windows, Node 24, Docker Desktop).
 
-Só entram comandos que eu já rodei nesta máquina.
+- instalar: `npm install` (roda `prisma generate`)
+- rodar o projeto: `npm run dev` · produção local: `npm run build` e `npx next start -p 3000`
+- rodar os testes: `npx vitest run` — precisa do Docker ligado (Testcontainers sobe um Postgres)
+- tipos: `npx tsc --noEmit`
+- aplicar migrations: `npx prisma migrate deploy` (usa `DIRECT_URL`)
+- seed: `npm run db:seed` (idempotente; senhas novas vão para `.seed-credentials.txt`)
+- fumaça no navegador: `node e2e/smoke.mjs` (precisa do app em `BASE_URL` e de Edge instalado)
+
+Não existe "banco local" configurado no repositório: a verificação local usou
+`supabase/postgres` + `supabase/gotrue` em Docker, montados à mão.
 
 ## Ambiente
 
@@ -33,17 +39,12 @@ Se algo não estiver escrito em lugar nenhum, pergunte — não decida.
 
 ## Estado atual do projeto
 
-Existe só documentação e um `.env` incompleto. Não existe código de aplicação (`package.json`, `src/`, Next, tRPC, Prisma), nem testes, nem migrations, nem `docs/specs/`, nem `rules/`, nem `.env.example` preenchido com banco local.
+Aplicação Next 15 + tRPC + Prisma + Supabase Auth, spec 002 (`docs/specs/002-backend-deploy/`).
+As seis telas estão ligadas ao banco. Redesign no estilo Vercel/Turborepo **contraria o
+ADR-002** — aguardando decisão do time (ver `handoff.md`).
 
-O que há hoje:
-
-- `docs/PRD.md` — v1 do negócio
-- `docs/adr/001-stack.md` — stack
-- `layout.md` — telas e tokens
-- `stacks.md` — rascunho que alimentou o ADR; se divergir, vence o ADR
-- `.env` — URL do projeto Supabase `vmlnbyldrcfzvxgcrdrc`, chave publishable, e host/porta/user/database da conexão **direta** (5432). Sem senha, sem URL do pooler (6543), sem `DATABASE_URL` local, sem `service_role`
-
-Falta: app, Prisma, seed `suporte_ti`, GitHub Actions, Sentry, pasta `rules/`, specs por feature.
+Falta (ADR-001, fora da spec 002): Sentry, GitHub Actions, rate limit, ESLint/Prettier/husky,
+convite de usuário pela interface.
 
 ## Procedimentos
 

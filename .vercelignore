@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+.seed-credentials*
+node_modules
+.next
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+coverage
+e2e-shots
+.next-start.log
