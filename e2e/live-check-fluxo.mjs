@@ -30,6 +30,20 @@ const browser = await chromium.launch({ channel: process.env.PW_CHANNEL ?? "msed
 const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
 page.on("pageerror", (e) => problemas.push(`[${passo}] pageerror: ${e.message.slice(0, 160)}`));
 
+// Devolve tudo o que a conta de teste tiver em aberto, esperando a lista carregar de verdade.
+async function devolverTudo() {
+  await page.goto(`${base}/meus-emprestimos`);
+  await page.getByText(/de 3 itens/).first().waitFor({ timeout: 15000 });
+  await page.locator("[aria-busy]").waitFor({ state: "detached", timeout: 15000 });
+  for (let i = 0; i < 3; i++) {
+    const n = await page.getByRole("button", { name: "Devolver" }).count();
+    if (n === 0) break;
+    await page.getByRole("button", { name: "Devolver" }).first().click();
+    await page.getByRole("button", { name: "Devolver" }).nth(n - 1).waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
+  }
+  await page.getByText("0 de 3 itens").first().waitFor({ timeout: 15000 });
+}
+
 async function pedir(pat) {
   await page.goto(`${base}/catalogo/${pat}`);
   await page.getByRole("button", { name: /Solicitar empréstimo/ }).click();
@@ -45,8 +59,7 @@ try {
   await page.waitForURL("**/catalogo", { timeout: 30000 });
 
   passo = "estado inicial";
-  await page.goto(`${base}/meus-emprestimos`);
-  await page.getByText("0 de 3 itens").first().waitFor({ timeout: 15000 });
+  await devolverTudo(); // sobra de uma rodada que parou no meio
   ok("a conta de teste começa com 0 de 3 itens");
 
   passo = "pedidos";
@@ -56,8 +69,9 @@ try {
     await page.getByText(`${i + 1} de 3 itens`).first().waitFor({ timeout: 15000 });
     ok(`CA-42 ${pat} pedido; agora ${i + 1} de 3 itens`);
   }
-  const prazos = await page.locator("li:has-text('Prazo') strong").allTextContents();
-  confere(prazos.length === 3 && prazos.every((p) => /\d{2}\/\d{2}/.test(p)), `CA-46 "Meus empréstimos" mostra a data prevista dos 3 (vi ${prazos.join(", ")})`);
+  await page.locator("li").nth(2).waitFor({ timeout: 15000 });
+  const prazos = (await page.locator("li strong").allTextContents()).filter((t) => /^\d{1,2}\/[a-zç]{3}/.test(t));
+  confere(prazos.length === 3, `CA-46 "Meus empréstimos" mostra a data prevista dos 3 (vi ${prazos.join(", ")})`);
   await page.screenshot({ path: path.join(shots, "meus-emprestimos-3.png") });
 
   passo = "limite";
@@ -78,17 +92,10 @@ try {
   // Devolve tudo, mesmo que algo acima tenha falhado, para não deixar a conta de teste presa.
   try {
     passo = "devolução";
-    await page.goto(`${base}/meus-emprestimos`);
-    for (let i = 0; i < 3; i++) {
-      const devolver = page.getByRole("button", { name: "Devolver" }).first();
-      if (!(await devolver.isVisible().catch(() => false))) break;
-      await devolver.click();
-      await page.waitForTimeout(1200);
-    }
-    await page.getByText("0 de 3 itens").first().waitFor({ timeout: 15000 });
+    await devolverTudo();
     ok("a conta de teste voltou a 0 de 3 itens");
   } catch (e) {
-    problemas.push(`[devolução] não consegui zerar a conta de teste: ${String(e.message).split("\n")[0]}. Devolva à mão em Meus empréstimos.`);
+    problemas.push(`[devolução] não consegui zerar a conta de teste: ${String(e.message).split(String.fromCharCode(10))[0]}. Devolva à mão em Meus empréstimos.`);
   }
   await browser.close();
 }
