@@ -229,3 +229,11 @@ O plano Hobby só vale enquanto o projeto for didático. Se a empresa passar a u
 - Observabilidade além de log e erro (métrica, tracing distribuído).
 - LGPD: base legal, política de retenção e fluxo de exclusão de dados.
 - SLO, meta de latência e orçamento de custo.
+
+## Proposta de emenda (2026-11-05) — aguarda decisão do time
+
+Autorizada pelo dono do projeto só para esta sessão; o agente propõe e não decide.
+
+- **`sharp` como `devDependency`**, usada apenas por `skills/imagens-equipamentos` para redimensionar fotos para 800×600 na máquina de quem prepara os dados. Não entra no bundle nem no servidor.
+- **Fotos de equipamento** em bucket público `equipment-images` do Supabase Storage. O envio é feito só por pessoa, com a chave `service_role` fora do alcance do agente.
+- **Fonte das fotos**: Openverse (licenças CC0, domínio público e CC BY), porque a Pexels não emite chave nova. Descartadas: Pixabay e Unsplash, que exigem chave.
