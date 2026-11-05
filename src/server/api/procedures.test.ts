@@ -143,6 +143,18 @@ describe("autorização", () => {
   });
 });
 
+describe("dados iniciais (spec 003)", () => {
+  it("test_ca_30_patrimonio_ti_0001_e_aceito_e_formato_invalido_nao", async () => {
+    const base = { name: "Notebook 14 polegadas", category: "NOTEBOOKS" as const, pickupLocation: "Balcão", status: "AVAILABLE" as const };
+    expect(await code(as(a.ops).equipment.create({ ...base, patrimonio: "ti-0001" }))).toBe("OK");
+    expect((await as(a.ops).equipment.get({ patrimonio: "TI-0001" })).name).toBe("Notebook 14 polegadas");
+    expect(await code(as(a.ops).equipment.create({ ...base, patrimonio: "PAT-7002" }))).toBe("OK"); // formato antigo continua válido
+    for (const ruim of ["T-0001", "TIXXX-0001", "TI0001", "TI-001", "TI-00001"]) {
+      expect(await code(as(a.ops).equipment.create({ ...base, patrimonio: ruim }))).toBe("BAD_REQUEST");
+    }
+  });
+});
+
 describe("isolamento entre tenants (ADR-001: um caso por procedimento)", () => {
   it("test_tenant_equipment_list_nao_enxerga_o_outro", async () => {
     const mine = await as(a.ana).equipment.list({ limit: 60 });

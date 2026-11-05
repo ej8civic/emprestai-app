@@ -106,7 +106,7 @@ export default function NewEquipmentPage() {
               </Select>
             </Field>
             <Field label="Patrimônio" error={errors.patrimonio?.message}>
-              <Input placeholder="PAT-0000" className="font-mono" aria-invalid={Boolean(errors.patrimonio)} {...register("patrimonio")} />
+              <Input placeholder="TI-0000" className="font-mono" aria-invalid={Boolean(errors.patrimonio)} {...register("patrimonio")} />
             </Field>
             <Field label="Número de série" error={errors.serial?.message}>
               <Input placeholder="Número de série" className="font-mono" {...register("serial")} />
