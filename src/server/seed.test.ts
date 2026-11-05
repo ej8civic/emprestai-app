@@ -117,7 +117,7 @@ describe("seed (spec 003)", () => {
 });
 
 describe("reset-producao.sql (spec 003)", () => {
-  const sql = readFileSync("pratica-sa-051126/scripts/reset-producao.sql", "utf8");
+  const sql = readFileSync("prisma/ops/reset-producao.sql", "utf8");
   const rodar = async (url: string) => {
     const c = new Client({ connectionString: url });
     await c.connect();
