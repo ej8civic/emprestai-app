@@ -39,3 +39,7 @@ Tela de catálogo nova, cadastro de equipamento pela interface, importação de 
 | outras contas | não diz | seed anterior criava 8 usuários | só o professor, `operacoes@` e `teste@empresti.example`, com senha aleatória em `.seed-credentials.txt` | precisa de conta própria para testar e de Operações; o professor fica intacto |
 | schema | não diz | `equipment` não tem imagem | migration aditiva com 5 colunas `image_*` anuláveis, DDL aprovado pelo dono | `rules/migration.md` |
 | créditos | "registrado" | — | colunas em `equipment`, sem tabela separada | uma foto por equipamento, sem reuso |
+| regras de bloqueio do agente | CA-39 pede que o agente não consiga enviar a produção | só texto nas rules e travas por variável | `.claude/settings.json` com `deny` para `.env`, `CONFIRM_PROD`, seed, migrate, upload, `vercel` e as ferramentas de escrita dos MCPs | trava do harness vale mais que aviso no texto; o verificador a apontou como fora do escopo e fica registrada aqui |
+| placeholder do formulário | — | `PAT-0000` | `TI-0000` | acompanha o novo formato aceito (CA-30) |
+| cópia da skill | — | — | `.claude/skills/imagens-equipamentos/SKILL.md`, derivada da fonte em `pratica-sa-051126/skills/` | o Claude Code só lê `.claude/skills/` |
+| prova em produção | CA-32 e CA-37 só se provam no link | — | `e2e/live-check-dados.mjs`, somente leitura, rodado por uma pessoa na T9 | o verificador exige script que cite o CA |
