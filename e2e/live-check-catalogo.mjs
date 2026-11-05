@@ -41,6 +41,9 @@ try {
   const imgs = page.locator("main img");
   await imgs.first().waitFor();
   const n = await imgs.count();
+  // As fotos são lazy: rola até o fim para o navegador carregar todas antes de contar.
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForFunction(() => [...document.querySelectorAll("main img")].every((i) => i.complete && i.naturalWidth > 0), null, { timeout: 20000 }).catch(() => {});
   const carregadas = await imgs.evaluateAll((els) => els.filter((i) => i.complete && i.naturalWidth === 800 && i.naturalHeight === 600).length);
   confere(n === 12, `CA-40 12 fotos no catálogo (vi ${n})`);
   confere(carregadas === 12, `CA-40 as 12 fotos carregaram em 800x600 (vi ${carregadas})`);
