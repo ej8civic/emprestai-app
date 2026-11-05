@@ -8,7 +8,7 @@ Restrições: ADR-001 (Prisma dono do schema, Supabase Storage, seed idempotente
    - `SKILL.md`: fluxo e regras curtas. `references/contrato.md`: o contrato e os critérios da revisão visual. `references/pixabay.md`: parâmetros da API.
    - `scripts/prepare.mjs`: busca na Pixabay (`image_type=photo`, `safesearch=true`, `per_page=20`; limite de 100 pedidos por minuto), baixa candidatas, calcula hash, descarta duplicadas, redimensiona com `sharp` para 800×600 (cover, JPEG), grava `out/images/TI-xxxx.jpg` e `out/manifest.json` (fonte, autor, licença, URL, hash, `revisao`).
    - `scripts/verify.mjs`: confere dimensões, unicidade, créditos e `revisao: aprovada` em todas. É o que prova o CA-33 e o CA-34.
-   - `scripts/upload.mjs`: envia ao bucket `equipment-images` com `upsert` e atualiza `image_*`. Roda só com `SUPABASE_SERVICE_ROLE_KEY` e `CONFIRM_PROD=sim`.
+   - `scripts/upload.mjs`: envia os arquivos ao bucket `equipment-images` com `upsert` (o banco recebe `image_*` pelo seed, não pelo upload). Roda só com `SUPABASE_SERVICE_ROLE_KEY` e `CONFIRM_PROD=sim`.
 4. **Seed**: `prisma/seed.ts` cria os 12 TI-xxxx, o professor (senha de `PROFESSOR_PASSWORD`) e as duas contas de apoio, sem empréstimos. Lê `out/manifest.json` para gravar `image_*`.
 5. **Reset**: `scripts/reset-producao.sql`, rodado pela pessoa no SQL Editor: apaga os dados de demonstração, inclusive os `auth.users` dos 8 usuários antigos.
 6. **Variáveis**: `PIXABAY_API_KEY`, `PROFESSOR_PASSWORD` e `SUPABASE_SERVICE_ROLE_KEY` só no `.env.local` da pessoa (o app não as usa em runtime, então não vão para a Vercel). `.env.example` lista as três sem valor.

@@ -6,7 +6,7 @@ import { Client } from "pg";
 
 /**
  * Postgres real em container (ADR-001: nada de Prisma mockado). O Supabase traz `auth.uid()` e os
- * roles `anon`/`authenticated`; aqui só o mínimo disso existe, para as policies da migration subirem.
+ * roles `anon`/`authenticated`; aqui só o mínimo disso existe, para as policies da migration subirem e o seed (auth.users, pgcrypto) rodar.
  */
 const SUPABASE_SHIM = `
   create role anon nologin;
@@ -14,6 +14,18 @@ const SUPABASE_SHIM = `
   create schema auth;
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  create schema extensions;
+  create extension pgcrypto schema extensions;
+  create table auth.users (
+    instance_id uuid, id uuid primary key, aud text, role text, email text unique, encrypted_password text,
+    email_confirmed_at timestamptz, raw_app_meta_data jsonb, raw_user_meta_data jsonb,
+    created_at timestamptz, updated_at timestamptz,
+    confirmation_token text, recovery_token text, email_change text, email_change_token_new text
+  );
+  create table auth.identities (
+    id uuid primary key, user_id uuid references auth.users (id), provider_id text, identity_data jsonb,
+    provider text, last_sign_in_at timestamptz, created_at timestamptz, updated_at timestamptz
+  );
   grant usage on schema public, auth to anon, authenticated;
   alter default privileges in schema public grant all on tables to anon, authenticated;
 `;
