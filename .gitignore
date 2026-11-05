@@ -10,3 +10,6 @@ next-env.d.ts
 coverage
 e2e-shots
 .next-start.log
+
+# skill imagens-equipamentos: cache de respostas da Pixabay
+pratica-sa-051126/skills/imagens-equipamentos/out/cache/
