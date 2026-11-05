@@ -1,5 +1,5 @@
 // Busca, baixa e padroniza as fotos dos equipamentos (Pixabay -> 800x600). NÃO envia nada a lugar nenhum.
-// Uso: node prepare.mjs [--only TI-0003]      Chave: PIXABAY_API_KEY (ambiente ou .env). Nunca é impressa.
+// Uso: node prepare.mjs [--only TI-0003 [--pick <idPixabay>] [--page 2]]      Chave: PIXABAY_API_KEY (ambiente ou .env). Nunca é impressa.
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -15,6 +15,9 @@ const ALTURA = 600;
 const DIA = 24 * 60 * 60 * 1000;
 
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] : null;
+const pick = process.argv.includes("--pick") ? Number(process.argv[process.argv.indexOf("--pick") + 1]) : null;
+const pagina = process.argv.includes("--page") ? Number(process.argv[process.argv.indexOf("--page") + 1]) : 1;
+if ((pick || pagina > 1) && !only) throw new Error("--pick e --page exigem --only");
 if (only && !lista.some((e) => e.patrimonio === only)) throw new Error(`${only} não está na lista`);
 
 try {
@@ -42,8 +45,8 @@ const hostPixabay = (url) => {
 };
 
 // Cache de 24 h exigido pela API. A chave não entra no nome do arquivo.
-async function buscar(q) {
-  const id = createHash("sha1").update(q).digest("hex").slice(0, 16);
+async function buscar(q, page = 1) {
+  const id = createHash("sha1").update(page > 1 ? `${q}#${page}` : q).digest("hex").slice(0, 16);
   const arquivo = path.join(out, "cache", `${id}.json`);
   if (existsSync(arquivo)) {
     const c = JSON.parse(readFileSync(arquivo, "utf8"));
@@ -59,6 +62,7 @@ async function buscar(q) {
     min_width: String(LARGURA),
     min_height: String(ALTURA),
     per_page: "20",
+    page: String(page),
     order: "popular",
   }).toString();
   const r = await fetch(url);
@@ -99,9 +103,10 @@ for (const eq of lista) {
   const { ids, hashes } = jaUsados(eq.patrimonio);
   for (const rep of reprovadas) ids.add(rep.idOrigem);
 
-  const hits = await buscar(eq.busca);
+  const hits = await buscar(eq.busca, pagina);
   let escolhido = null;
   for (const h of hits) {
+    if (pick && h.id !== pick) continue; // candidata escolhida na revisão visual
     if (ids.has(h.id) || !h.largeImageURL || !hostPixabay(h.largeImageURL)) continue;
     const resp = await fetch(h.largeImageURL);
     if (!resp.ok) continue;

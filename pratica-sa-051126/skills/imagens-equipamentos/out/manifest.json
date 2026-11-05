@@ -1,0 +1,283 @@
+{
+  "itens": {
+    "TI-0001": {
+      "arquivo": "images/TI-0001.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "945228ed87180dfec7924e4409e841f9a1864e59a556dee928ca47bbf37d501d",
+      "fonte": "Pixabay",
+      "idOrigem": 1282241,
+      "autor": "Pexels",
+      "paginaOrigem": "https://pixabay.com/photos/apple-smartphone-desk-laptop-1282241/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "laptop on white desk",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 7188564,
+          "motivo": "xícara de café, não é notebook"
+        },
+        {
+          "idOrigem": 4532322,
+          "motivo": "logo Apple e conteúdo de tela legíveis"
+        }
+      ]
+    },
+    "TI-0002": {
+      "arquivo": "images/TI-0002.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "47e5dbd4b62e93cc9eb7a62d804e2033c9700770cde71c0b90ea3220319e7624",
+      "fonte": "Pixabay",
+      "idOrigem": 791032,
+      "autor": "kaboompics",
+      "paginaOrigem": "https://pixabay.com/photos/technology-laptop-computer-netbook-791032/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "open laptop minimal desk",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 1853259,
+          "motivo": "logo da Apple legível"
+        },
+        {
+          "idOrigem": 2511065,
+          "motivo": "não mostra notebook"
+        }
+      ]
+    },
+    "TI-0003": {
+      "arquivo": "images/TI-0003.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "449e96fa72020841d26cd4b916f58e5fdde24e812c1b2cf08627226d2240b504",
+      "fonte": "Pixabay",
+      "idOrigem": 1852901,
+      "autor": "Pexels",
+      "paginaOrigem": "https://pixabay.com/photos/iphone-laptop-macbook-pro-notebook-1852901/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "laptop closeup keyboard",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 886462,
+          "motivo": "teclas e logo do Windows legíveis"
+        },
+        {
+          "idOrigem": 620822,
+          "motivo": "mãos de pessoa"
+        }
+      ]
+    },
+    "TI-0004": {
+      "arquivo": "images/TI-0004.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "5b3139ab33bda0c25c465db6777633bbe25d706d46027d014b72dd2171393d94",
+      "fonte": "Pixabay",
+      "idOrigem": 925806,
+      "autor": "StockSnap",
+      "paginaOrigem": "https://pixabay.com/photos/office-desk-business-working-925806/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "closed laptop on table",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 594090,
+          "motivo": "pessoas"
+        },
+        {
+          "idOrigem": 1868502,
+          "motivo": "maquete de quadro, sem equipamento"
+        }
+      ]
+    },
+    "TI-0005": {
+      "arquivo": "images/TI-0005.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "419c971937763becd7ccc5bf675354d6af5629a8bd9fee7c2bee7746b5eee4ab",
+      "fonte": "Pixabay",
+      "idOrigem": 1140699,
+      "autor": "theglassdesk",
+      "paginaOrigem": "https://pixabay.com/photos/desk-computer-modern-keyboard-1140699/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "computer monitor on desk",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 4532323,
+          "motivo": "logo da Apple"
+        },
+        {
+          "idOrigem": 1867761,
+          "motivo": "marca Dell e conteúdo de tela legíveis"
+        },
+        {
+          "idOrigem": 1834327,
+          "motivo": "texto NEW YORK legível e logo Apple na base"
+        }
+      ]
+    },
+    "TI-0006": {
+      "arquivo": "images/TI-0006.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "76520cf85c50e84c66a68d7165e21cf739ab4e3659da1f3956e7047e37901994",
+      "fonte": "Pixabay",
+      "idOrigem": 2593899,
+      "autor": "StockSnap",
+      "paginaOrigem": "https://pixabay.com/photos/computer-keyboard-apple-electronics-2593899/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "monitor screen office desk",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 1868496,
+          "motivo": "logo da Apple e objetos de decoração"
+        },
+        {
+          "idOrigem": 849804,
+          "motivo": "descartada sem abrir em tamanho real: trocada na folha de contato"
+        },
+        {
+          "idOrigem": 2564367,
+          "motivo": "marca LG legível na moldura"
+        }
+      ]
+    },
+    "TI-0007": {
+      "arquivo": "images/TI-0007.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "122606974a304ceddef829e9172ce2031164ed98b1918c1fbd4fceedd3a4392d",
+      "fonte": "Pixabay",
+      "idOrigem": 17894,
+      "autor": "PublicDomainPictures",
+      "paginaOrigem": "https://pixabay.com/photos/blank-business-computer-desktop-17894/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "black computer screen",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 6801334,
+          "motivo": "celular sobre tablet, não é monitor"
+        },
+        {
+          "idOrigem": 1867762,
+          "motivo": "descartada sem abrir em tamanho real: trocada na folha de contato"
+        }
+      ]
+    },
+    "TI-0008": {
+      "arquivo": "images/TI-0008.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "aad4775d48ef5904358a4e5c507e5f3cbb81003754deee1b3b62d591e16c5034",
+      "fonte": "Pixabay",
+      "idOrigem": 1827,
+      "autor": "PublicDomainPictures",
+      "paginaOrigem": "https://pixabay.com/photos/high-definition-multimedia-1827/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "hdmi cable",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 2202226,
+          "motivo": "inscrição HDMI legível no conector"
+        },
+        {
+          "idOrigem": 5407447,
+          "motivo": "descartada sem abrir em tamanho real: trocada na folha de contato"
+        }
+      ]
+    },
+    "TI-0009": {
+      "arquivo": "images/TI-0009.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "4d4adc1f76cbf80ac2592cfca9a2ae979434ecdba90782091d22a1a1cbe593ea",
+      "fonte": "Pixabay",
+      "idOrigem": 4875319,
+      "autor": "ds_30",
+      "paginaOrigem": "https://pixabay.com/photos/cable-computer-usb-technology-4875319/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "usb cable white background",
+      "revisao": "aprovada",
+      "reprovadas": []
+    },
+    "TI-0010": {
+      "arquivo": "images/TI-0010.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "a80e261a3a0d148ba5df89af1ce5c40727c60be25a5a3b49eda1c7ef9995298c",
+      "fonte": "Pixabay",
+      "idOrigem": 494649,
+      "autor": "blickpixel",
+      "paginaOrigem": "https://pixabay.com/photos/network-cable-cable-patch-494649/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "ethernet cable",
+      "revisao": "aprovada",
+      "reprovadas": []
+    },
+    "TI-0011": {
+      "arquivo": "images/TI-0011.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "da7a58b99ba7caeaa69a4c0f0643b705a0becaa6d2e4811e7b73f3ff6bf9f917",
+      "fonte": "Pixabay",
+      "idOrigem": 1163880,
+      "autor": "willsong",
+      "paginaOrigem": "https://pixabay.com/photos/video-conference-hd-material-1163880/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "webcam",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 1155173,
+          "motivo": "logo Lenovo e ThinkPad legíveis; não é webcam"
+        },
+        {
+          "idOrigem": 835470,
+          "motivo": "descartada sem abrir em tamanho real: trocada na folha de contato"
+        },
+        {
+          "idOrigem": 1219748,
+          "motivo": "texto de especificação legível no anel da lente"
+        }
+      ]
+    },
+    "TI-0012": {
+      "arquivo": "images/TI-0012.jpg",
+      "largura": 800,
+      "altura": 600,
+      "sha256": "a0191146ed0a34937e81d1a070423f841d808118b81326e024d62f2c4804af77",
+      "fonte": "Pixabay",
+      "idOrigem": 6919164,
+      "autor": "ReneSobeckMedia",
+      "paginaOrigem": "https://pixabay.com/photos/go-pro-action-cam-camera-drone-6919164/",
+      "licenca": "Pixabay Content License",
+      "termoBusca": "compact camera on table",
+      "revisao": "aprovada",
+      "reprovadas": [
+        {
+          "idOrigem": 2364849,
+          "motivo": "rosto de criança"
+        },
+        {
+          "idOrigem": 541213,
+          "motivo": "descartada sem abrir em tamanho real: trocada na folha de contato"
+        },
+        {
+          "idOrigem": 4397018,
+          "motivo": "marca GoPro e tela com texto legíveis"
+        },
+        {
+          "idOrigem": 820018,
+          "motivo": "marcação ФЭД-2 legível no corpo"
+        }
+      ]
+    }
+  },
+  "geradoEm": "2026-11-05T15:14:30.054Z"
+}

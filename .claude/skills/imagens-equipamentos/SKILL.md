@@ -16,6 +16,9 @@ e a lista dos 12 equipamentos, com os termos de busca, em `references/equipament
 3. Revise as fotos uma a uma, abrindo cada arquivo de `out/images/`, pelos critérios de
    `references/contrato.md`. Marque `aprovada` ou `reprovada` com motivo no manifesto.
    Reprovada: rode `prepare.mjs --only TI-000N` de novo; a foto reprovada fica em `reprovadas` e não volta.
+   Para escolher a dedo: `--only TI-000N --pick <idPixabay>` (a candidata precisa estar nos resultados da busca) e
+   `--page 2`, `3`… para resultados mais fundos. Antes de escolher, olhe várias candidatas de uma vez (folha de contato) e
+   confira a escolhida em tamanho real; amplie qualquer detalhe suspeito antes de reprovar ou aprovar.
 4. `node <raiz>/scripts/verify.mjs` precisa terminar com "OK: 12 imagens".
 5. PARE. O envio ao Supabase (`scripts/upload.mjs`) é feito por uma pessoa, no terminal dela.
 
