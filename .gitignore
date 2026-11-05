@@ -12,4 +12,8 @@ e2e-shots
 .next-start.log
 
 # skill imagens-equipamentos: cache de respostas da Pixabay
-pratica-sa-051126/skills/imagens-equipamentos/out/cache/
+prisma/data/imagens/cache/
+
+# Material de trabalho local da prática: nada disto vai para o GitHub.
+pratica-sa-051126/
+

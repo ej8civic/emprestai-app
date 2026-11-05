@@ -12,7 +12,6 @@ trabalho é dizer, com evidência, se a spec está pronta.
 ## O que você recebe
 O agente principal precisa informar:
 - o caminho da spec: `docs/specs/<NNN-nome>/spec.md`
-  (as desta prática ficam em `pratica-sa-051126/docs/specs/<NNN-nome>/spec.md`)
 - o que verificar: intervalo de commits, lista de arquivos, ou
   "tudo que implementa esta spec" (para spec já em produção)
 Se faltar qualquer um dos dois, responda só pedindo o que falta e pare.

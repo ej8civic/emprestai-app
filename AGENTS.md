@@ -50,10 +50,8 @@ CI: `.github/workflows/deploy.yml` (testes e `prisma migrate deploy` em todo pus
 ## Procedimentos
 
 ## Subagentes
-- A fonte fica em `pratica-sa-051126/agents/<nome>.md`. O frontmatter diz quando delegar;
-  o corpo é a instrução completa do subagente. A cópia que o Claude Code lê é
-  `.claude/agents/<nome>.md` e é derivada da fonte: edite a fonte e copie.
+- Ficam em `.claude/agents/<nome>.md`. O frontmatter diz quando delegar; o corpo é a instrução completa do subagente.
 - Subagente não herda esta conversa: ao delegar, passe tudo que o arquivo dele pede como entrada.
 - Se o harness não tiver subagentes, abra uma sessão nova e comece com:
-  "Aja conforme pratica-sa-051126/agents/<nome>.md." e as entradas pedidas.
-- Skills da prática: `pratica-sa-051126/skills/`.
+  "Aja conforme .claude/agents/<nome>.md." e as entradas pedidas.
+- Skills: `.claude/skills/`.

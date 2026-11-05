@@ -4,9 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { exigirConfirmacaoDeProducao, runSeed, PROFESSOR_EMAIL, type ItemDaLista, type Manifesto } from "../../prisma/seed-lib";
 import { startTestDb, type TestDb } from "@/test/db";
 
-const SKILL = "pratica-sa-051126/skills/imagens-equipamentos";
-const lista = JSON.parse(readFileSync(`${SKILL}/references/equipamentos.json`, "utf8")) as ItemDaLista[];
-const manifesto = JSON.parse(readFileSync(`${SKILL}/out/manifest.json`, "utf8")) as Manifesto;
+const DADOS = "prisma/data";
+const lista = JSON.parse(readFileSync(`${DADOS}/equipamentos.json`, "utf8")) as ItemDaLista[];
+const manifesto = JSON.parse(readFileSync(`${DADOS}/imagens/manifest.json`, "utf8")) as Manifesto;
 const SENHA = "senha-so-de-teste-9";
 const URL_BASE = "https://projeto.supabase.co";
 
