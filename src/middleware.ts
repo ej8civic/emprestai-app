@@ -1,27 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { csp } from "@/lib/csp";
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login"];
 
-function csp(nonce: string) {
-  const dev = process.env.NODE_ENV !== "production";
-  return [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
-    `style-src 'self' 'nonce-${nonce}'`,
-    "img-src 'self' data: blob:",
-    "font-src 'self'",
-    "connect-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-  ].join("; ");
-}
-
 export async function middleware(req: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
-  const policy = csp(nonce);
+  const policy = csp(nonce, process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NODE_ENV !== "production");
   const headers = new Headers(req.headers);
   headers.set("x-nonce", nonce);
   headers.set("content-security-policy", policy);

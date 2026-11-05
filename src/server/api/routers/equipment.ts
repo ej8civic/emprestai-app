@@ -18,12 +18,12 @@ export const equipmentRouter = router({
         limit: z.number().int().min(1).max(60).default(24),
       }),
     )
-    .query(({ ctx, input }) => listEquipment(ctx.db, ctx.tenantId, input)),
+    .query(({ ctx, input }) => listEquipment(ctx.db, ctx.tenantId, input, ctx.membership)),
 
   counts: tenantProcedure.query(({ ctx }) => equipmentCounts(ctx.db, ctx.tenantId)),
 
   get: tenantProcedure.input(z.object({ patrimonio: z.string().min(1).max(20) })).query(async ({ ctx, input }) => {
-    const item = await getEquipment(ctx.db, ctx.tenantId, input.patrimonio);
+    const item = await getEquipment(ctx.db, ctx.tenantId, input.patrimonio, ctx.membership);
     if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Equipamento não encontrado." });
     const { decision } = await borrowDecision(ctx.db, ctx.tenantId, ctx.membership.id, new Date());
     return {

@@ -4,7 +4,7 @@ import { Info } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
-import { EquipmentIcon } from "@/components/equipment-icon";
+import { EquipmentImage } from "@/components/equipment-image";
 import { Button } from "@/components/ui/button";
 import { Card, Chip, Empty, PageHead, StatePill } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
@@ -17,7 +17,7 @@ type Item = RouterOutputs["equipment"]["list"]["items"][number];
 
 function footer(e: Item) {
   if (e.state === "available") return "Solicitar →";
-  if (e.state === "loaned") return `Com ${e.holderName} · devolve ${e.dueAt ? formatDM(e.dueAt) : "—"}`;
+  if (e.state === "loaned") return `${e.holderName ? `Com ${e.holderName}` : "Emprestado"} · devolve ${e.dueAt ? formatDM(e.dueAt) : "—"}`;
   if (e.state === "maintenance") return "Na assistência · peça";
   return "Fora de uso";
 }
@@ -26,19 +26,19 @@ function EquipmentCard({ e }: { e: Item }) {
   const body = (
     <Card
       className={cn(
-        "flex h-full min-h-44 flex-col gap-4 p-5 transition-colors",
+        "flex h-full flex-col gap-4 p-4 transition-colors",
         e.state === "available" && "group-hover:border-subtle group-hover:bg-surface-2",
       )}
     >
+      <EquipmentImage image={e.image} category={e.category} name={e.name} />
       <div className="flex items-start justify-between gap-3">
-        <EquipmentIcon category={e.category} />
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="truncate font-medium tracking-tight">{e.name}</span>
+          <span className="font-mono text-xs text-subtle">
+            {CATEGORY_LABEL[e.category]} · {e.patrimonio}
+          </span>
+        </div>
         <StatePill state={e.state} />
-      </div>
-      <div className="flex flex-col gap-1">
-        <span className="font-medium tracking-tight">{e.name}</span>
-        <span className="font-mono text-xs text-subtle">
-          {CATEGORY_LABEL[e.category]} · {e.patrimonio}
-        </span>
       </div>
       <span className={cn("mt-auto text-[13px]", e.state === "available" ? "text-fg" : "text-subtle")}>{footer(e)}</span>
     </Card>
@@ -116,7 +116,7 @@ function CatalogView() {
       ) : list.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy>
           {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="h-44 animate-pulse rounded-xl border border-line bg-surface" />
+            <div key={i} className="h-72 animate-pulse rounded-xl border border-line bg-surface" />
           ))}
         </div>
       ) : items.length === 0 ? (

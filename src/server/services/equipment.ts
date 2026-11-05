@@ -1,7 +1,16 @@
-import type { Category, EquipmentStatus, Prisma, PrismaClient } from "@prisma/client";
+import type { Category, EquipmentStatus, Prisma, PrismaClient, Role } from "@prisma/client";
 import type { EquipmentState } from "@/lib/labels";
 
 type Db = PrismaClient | Prisma.TransactionClient;
+
+/** Quem olha: Operações vê todo mundo (PRD); colaborador vê só o que é seu (CA-49). */
+export type Viewer = { id: string; role: Role };
+const canSeeHolder = (viewer: Viewer, holderId: string | undefined) => viewer.role === "OPERACOES" || holderId === viewer.id;
+
+type ImageRow = { imageUrl: string | null; imageAuthor: string | null; imageLicense: string | null; imageSourceUrl: string | null };
+export function imageOf(e: ImageRow) {
+  return e.imageUrl ? { url: e.imageUrl, author: e.imageAuthor, license: e.imageLicense, sourceUrl: e.imageSourceUrl } : null;
+}
 
 export function stateOf(status: EquipmentStatus, hasOpenLoan: boolean): EquipmentState {
   if (status === "MAINTENANCE") return "maintenance";
@@ -13,6 +22,7 @@ export async function listEquipment(
   db: Db,
   tenantId: string,
   input: { category?: Category; onlyAvailable?: boolean; q?: string; cursor?: string; limit: number },
+  viewer: Viewer,
 ) {
   const where: Prisma.EquipmentWhereInput = {
     tenantId,
@@ -29,7 +39,7 @@ export async function listEquipment(
   const rows = await db.equipment.findMany({
     where,
     include: {
-      loans: { where: { returnedAt: null }, take: 1, include: { membership: { select: { name: true } } } },
+      loans: { where: { returnedAt: null }, take: 1, include: { membership: { select: { id: true, name: true } } } },
     },
     orderBy: { patrimonio: "asc" },
     take: input.limit + 1,
@@ -45,7 +55,8 @@ export async function listEquipment(
         name: e.name,
         category: e.category,
         state: stateOf(e.status, Boolean(open)),
-        holderName: open?.membership.name ?? null,
+        image: imageOf(e),
+        holderName: open && canSeeHolder(viewer, open.membership.id) ? open.membership.name : null,
         dueAt: open?.dueAt ?? null,
       };
     }),
@@ -61,11 +72,11 @@ export async function equipmentCounts(db: Db, tenantId: string) {
   return { total, available };
 }
 
-export async function getEquipment(db: Db, tenantId: string, patrimonio: string) {
+export async function getEquipment(db: Db, tenantId: string, patrimonio: string, viewer: Viewer) {
   const e = await db.equipment.findUnique({
     where: { tenantId_patrimonio: { tenantId, patrimonio } },
     include: {
-      loans: { orderBy: { loanedAt: "desc" }, take: 6, include: { membership: { select: { name: true } } } },
+      loans: { orderBy: { loanedAt: "desc" }, take: 6, include: { membership: { select: { id: true, name: true } } } },
     },
   });
   if (!e) return null;
@@ -80,7 +91,8 @@ export async function getEquipment(db: Db, tenantId: string, patrimonio: string)
     pickupLocation: e.pickupLocation,
     serial: e.serial,
     state: stateOf(e.status, Boolean(open)),
-    holderName: open?.membership.name ?? null,
+    image: imageOf(e),
+    holderName: open && canSeeHolder(viewer, open.membership.id) ? open.membership.name : null,
     dueAt: open?.dueAt ?? null,
     lastReturnAt: lastReturn?.returnedAt ?? null,
     history: e.loans.map((l) => ({ id: l.id, loanedAt: l.loanedAt, dueAt: l.dueAt, returnedAt: l.returnedAt })),

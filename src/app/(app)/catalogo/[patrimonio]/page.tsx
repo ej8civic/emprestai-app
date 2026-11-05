@@ -4,7 +4,7 @@ import { ArrowRight, CaretRight } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import * as React from "react";
-import { EquipmentIcon } from "@/components/equipment-icon";
+import { EquipmentImage } from "@/components/equipment-image";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Card, Empty, LimitMeter, StatePill } from "@/components/ui/primitives";
@@ -57,11 +57,7 @@ export default function EquipmentDetailPage() {
 
       <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-8">
-          <div className="relative isolate grid h-64 place-items-center overflow-hidden rounded-xl border border-line bg-surface">
-            <div aria-hidden className="bg-grid absolute inset-0 -z-10" />
-            <div aria-hidden className="glow-turbo absolute inset-0 -z-10 opacity-40" />
-            <EquipmentIcon category={e.category} className="size-20 rounded-2xl [&_svg]:size-9" />
-          </div>
+          <EquipmentImage image={e.image} category={e.category} name={e.name} className="max-w-xl" />
 
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-[32px] font-semibold tracking-tight">{e.name}</h1>
@@ -128,7 +124,7 @@ export default function EquipmentDetailPage() {
               </>
             ) : (
               <p className="text-sm text-muted">
-                {e.state === "loaned" && `Com ${e.holderName} até ${e.dueAt ? formatDM(e.dueAt) : "—"}.`}
+                {e.state === "loaned" && `${e.holderName ? `Com ${e.holderName}` : "Emprestado"} até ${e.dueAt ? formatDM(e.dueAt) : "—"}.`}
                 {e.state === "maintenance" && "Na assistência. Não está disponível."}
                 {e.state === "retired" && "Fora de uso."}
               </p>

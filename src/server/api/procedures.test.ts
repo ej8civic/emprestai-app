@@ -155,6 +155,43 @@ describe("dados iniciais (spec 003)", () => {
   });
 });
 
+describe("catálogo (spec 004)", () => {
+  it("test_ca_40_catalogo_traz_imagem_nome_categoria_e_situacao_de_cada_item", async () => {
+    const x = await makeTenant(t.db, "catalogo");
+    const [com, sem] = [x.equipment[0]!, x.equipment[1]!];
+    await t.db.equipment.update({
+      where: { id: com.id },
+      data: { imageUrl: "https://p.supabase.co/storage/v1/object/public/equipment-images/X.jpg", imageAuthor: "autora", imageLicense: "Pixabay Content License", imageSourceUrl: "https://pixabay.com/photos/x-1/" },
+    });
+    const list = await as(x.ana).equipment.list({ limit: 60 });
+    const byPat = Object.fromEntries(list.items.map((i) => [i.patrimonio, i]));
+    expect(byPat[com.patrimonio]).toMatchObject({
+      name: "Notebook A",
+      category: "NOTEBOOKS",
+      state: "available",
+      image: { url: expect.stringContaining("equipment-images"), author: "autora", license: "Pixabay Content License", sourceUrl: "https://pixabay.com/photos/x-1/" },
+    });
+    expect(byPat[sem.patrimonio]!.image).toBeNull(); // sem foto continua listado
+    expect(byPat[x.broken.patrimonio]!.state).toBe("maintenance");
+    expect((await as(x.ana).equipment.get({ patrimonio: com.patrimonio })).image?.author).toBe("autora");
+  });
+
+  it("test_ca_49_colaborador_nao_ve_quem_esta_com_o_item_mas_operacoes_ve", async () => {
+    const x = await makeTenant(t.db, "privado");
+    const outra = await t.db.membership.create({
+      data: { tenantId: x.tenant.id, userId: crypto.randomUUID(), role: "COLABORADOR", name: "Outra Pessoa", email: "outra@x.test", department: "T" },
+    });
+    const pat = x.equipment[0]!.patrimonio;
+    await as(x.ana).loan.request({ patrimonio: pat });
+    const holder = async (m: typeof x.ana) => (await as(m).equipment.list({ limit: 60 })).items.find((i) => i.patrimonio === pat)!;
+    expect((await holder(outra)).holderName).toBeNull();
+    expect((await as(outra).equipment.get({ patrimonio: pat })).holderName).toBeNull();
+    expect((await holder(x.ana)).holderName).toBe(x.ana.name); // o próprio item aparece com o nome
+    expect((await holder(x.ops)).holderName).toBe(x.ana.name);
+    expect((await as(x.ops).equipment.get({ patrimonio: pat })).holderName).toBe(x.ana.name);
+  });
+});
+
 describe("isolamento entre tenants (ADR-001: um caso por procedimento)", () => {
   it("test_tenant_equipment_list_nao_enxerga_o_outro", async () => {
     const mine = await as(a.ana).equipment.list({ limit: 60 });

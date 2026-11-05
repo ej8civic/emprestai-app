@@ -21,6 +21,7 @@ Devolução, tela de Operações, reserva futura, e-mail, renovação.
 - **CA-45** Dois pedidos simultâneos ao mesmo equipamento: só um empréstimo é criado.
 - **CA-46** "Meus empréstimos" lista os itens em aberto, cada um com a data de devolução prevista.
 - **CA-47** O catálogo mostra um crédito discreto "Fotos: Pixabay" com link para `/creditos`; essa página lista autor e origem de cada foto.
+- **CA-49** Colaborador não vê quem está com um item emprestado (só os próprios); Operações vê. Fonte: PRD, "Operações vê quem está com o quê" e "cada pessoa vê os próprios empréstimos".
 - **CA-48** O que o colaborador vê e faz vem do tenant da sessão; item de outro tenant não é visto nem solicitado (spec 002, CA-24, continua valendo).
 
 ## Decisões (conflitos e lacunas)

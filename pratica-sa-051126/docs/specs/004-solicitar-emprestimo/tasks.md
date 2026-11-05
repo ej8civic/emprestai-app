@@ -2,8 +2,8 @@
 
 Depende da T6 da spec 003 (dados) para a conferência em produção.
 
-- [ ] T1 (CA-40) `equipment.list` e `equipment.get` com imagem; teste.
-- [ ] T2 (CA-40) Imagem no catálogo e no detalhe; CSP `img-src`.
+- [x] T1 (CA-40, CA-49) `equipment.list` e `equipment.get` com imagem; teste.
+- [x] T2 (CA-40) Imagem no catálogo e no detalhe; CSP `img-src`.
 - [ ] T3 (CA-47) `/creditos` e a linha de crédito; teste.
 - [ ] T4 (CA-41, CA-42) Testes que citam os CAs de disponibilidade e de prazo.
 - [ ] T5 (CA-43, CA-44) Motivo visível na tela e testes de limite e atraso.
