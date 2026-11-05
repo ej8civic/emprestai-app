@@ -12,3 +12,9 @@ A regra já existe (`src/server/domain/loan-rules.ts`, `src/server/services/loan
 6. Os testes `test_prd_*` que já provam a mesma regra ficam; cada CA ganha o seu teste citando o ID, sem perder cobertura.
 
 Risco: o `e2e/smoke.mjs` completo cria empréstimos e não roda em produção. Em produção só o `live-check.mjs`; as solicitações reais são feitas por você com `teste@`.
+
+Provas em produção (rodadas por uma pessoa na T9, nunca pelo agente):
+- `e2e/live-check-catalogo.mjs` (só leitura, conta `teste@`): CA-40, CA-41 (itens em manutenção), CA-47, CA-49.
+- `e2e/live-check-fluxo.mjs` (escreve; `CONFIRM_PROD=sim`; só `teste@`): CA-42, CA-43, CA-46 e CA-41 depois do pedido; devolve tudo no fim.
+- O CA-44 (atraso) só se prova por teste de servidor: não há como produzir um atraso real em produção sem esperar 14 dias.
+- Não foi possível rodar a interface contra um Supabase local nesta sessão; as telas novas foram conferidas por `tsc`, `build` e pelos testes de servidor e de CSP, e a primeira olhada real fica para o script de produção.
