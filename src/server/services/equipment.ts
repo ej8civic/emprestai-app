@@ -98,3 +98,20 @@ export async function getEquipment(db: Db, tenantId: string, patrimonio: string,
     history: e.loans.map((l) => ({ id: l.id, loanedAt: l.loanedAt, dueAt: l.dueAt, returnedAt: l.returnedAt })),
   };
 }
+
+/** Crédito das fotos do tenant (CA-47): só quem tem foto. */
+export async function equipmentCredits(db: Db, tenantId: string) {
+  const rows = await db.equipment.findMany({
+    where: { tenantId, imageUrl: { not: null } },
+    orderBy: { patrimonio: "asc" },
+    select: { patrimonio: true, name: true, imageSource: true, imageAuthor: true, imageLicense: true, imageSourceUrl: true },
+  });
+  return rows.map((r) => ({
+    patrimonio: r.patrimonio,
+    name: r.name,
+    source: r.imageSource,
+    author: r.imageAuthor,
+    license: r.imageLicense,
+    sourceUrl: r.imageSourceUrl,
+  }));
+}

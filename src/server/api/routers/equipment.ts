@@ -4,7 +4,7 @@ import { z } from "zod";
 import { adminProcedure, router, tenantProcedure } from "@/server/api/trpc";
 import { CATEGORIES } from "@/lib/labels";
 import { createEquipmentInput } from "@/lib/schemas";
-import { equipmentCounts, getEquipment, listEquipment } from "@/server/services/equipment";
+import { equipmentCounts, equipmentCredits, getEquipment, listEquipment } from "@/server/services/equipment";
 import { audit, borrowDecision } from "@/server/services/loans";
 
 export const equipmentRouter = router({
@@ -21,6 +21,8 @@ export const equipmentRouter = router({
     .query(({ ctx, input }) => listEquipment(ctx.db, ctx.tenantId, input, ctx.membership)),
 
   counts: tenantProcedure.query(({ ctx }) => equipmentCounts(ctx.db, ctx.tenantId)),
+
+  credits: tenantProcedure.query(({ ctx }) => equipmentCredits(ctx.db, ctx.tenantId)),
 
   get: tenantProcedure.input(z.object({ patrimonio: z.string().min(1).max(20) })).query(async ({ ctx, input }) => {
     const item = await getEquipment(ctx.db, ctx.tenantId, input.patrimonio, ctx.membership);

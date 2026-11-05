@@ -192,6 +192,22 @@ describe("catálogo (spec 004)", () => {
   });
 });
 
+describe("créditos das fotos (spec 004)", () => {
+  it("test_ca_47_creditos_listam_autor_licenca_e_origem_so_de_quem_tem_foto_e_so_do_meu_tenant", async () => {
+    const x = await makeTenant(t.db, "creditos");
+    const y = await makeTenant(t.db, "creditos-outro");
+    await t.db.equipment.update({
+      where: { id: x.equipment[0]!.id },
+      data: { imageUrl: "https://p.supabase.co/x.jpg", imageSource: "Pixabay", imageAuthor: "fotografa", imageLicense: "Pixabay Content License", imageSourceUrl: "https://pixabay.com/photos/a-1/" },
+    });
+    await t.db.equipment.update({ where: { id: y.equipment[0]!.id }, data: { imageUrl: "https://p.supabase.co/y.jpg", imageAuthor: "outra", imageSource: "Pixabay" } });
+    const credits = await as(x.ana).equipment.credits();
+    expect(credits).toEqual([
+      { patrimonio: x.equipment[0]!.patrimonio, name: "Notebook A", source: "Pixabay", author: "fotografa", license: "Pixabay Content License", sourceUrl: "https://pixabay.com/photos/a-1/" },
+    ]);
+  });
+});
+
 describe("isolamento entre tenants (ADR-001: um caso por procedimento)", () => {
   it("test_tenant_equipment_list_nao_enxerga_o_outro", async () => {
     const mine = await as(a.ana).equipment.list({ limit: 60 });

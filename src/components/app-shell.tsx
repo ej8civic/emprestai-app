@@ -118,7 +118,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 text-xs text-subtle sm:px-6">
           <span className="font-mono">EmpresTI · v1</span>
-          <span>3 itens por pessoa · 14 dias de prazo</span>
+          <span className="flex items-center gap-3">
+            <span>3 itens por pessoa · 14 dias de prazo</span>
+            <Link href="/creditos" className="underline underline-offset-4 hover:text-fg">
+              Fotos: Pixabay
+            </Link>
+          </span>
         </div>
       </footer>
     </div>
