@@ -8,12 +8,13 @@
  */
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
-import { runSeed, type ItemDaLista, type Manifesto } from "./seed-lib";
+import { exigirConfirmacaoDeProducao, runSeed, type ItemDaLista, type Manifesto } from "./seed-lib";
 
 const SKILL = "pratica-sa-051126/skills/imagens-equipamentos";
 const db = new PrismaClient();
 
 async function main() {
+  exigirConfirmacaoDeProducao(process.env.DATABASE_URL, process.env);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) throw new Error("NEXT_PUBLIC_SUPABASE_URL ausente");
   const lista = JSON.parse(readFileSync(`${SKILL}/references/equipamentos.json`, "utf8")) as ItemDaLista[];

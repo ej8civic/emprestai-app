@@ -34,6 +34,17 @@ const SITUACAO: Record<ItemDaLista["situacao"], EquipmentStatus> = {
 export const PROFESSOR_EMAIL = "marcelo.grilo@institutojef.org.br";
 export const BUCKET = "equipment-images";
 
+const HOSTS_LOCAIS = new Set(["localhost", "127.0.0.1", "::1", "[::1]", "host.docker.internal"]);
+
+/** CA-39: contra um banco que não é local, o seed só roda com CONFIRM_PROD=sim, dito por uma pessoa. */
+export function exigirConfirmacaoDeProducao(databaseUrl: string | undefined, env: Record<string, string | undefined>) {
+  if (!databaseUrl) throw new Error("DATABASE_URL ausente");
+  const host = new URL(databaseUrl).hostname;
+  if (!HOSTS_LOCAIS.has(host) && env.CONFIRM_PROD !== "sim") {
+    throw new Error("O banco não é local: confirme com CONFIRM_PROD=sim. Esse passo é de uma pessoa, não do agente.");
+  }
+}
+
 export function pessoas(professorPassword: string | undefined): Pessoa[] {
   return [
     { name: "Marcelo Grilo", email: PROFESSOR_EMAIL, department: "Professor", role: "COLABORADOR", fixedPassword: professorPassword },
