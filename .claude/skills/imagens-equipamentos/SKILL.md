@@ -5,15 +5,15 @@ description: Prepara as fotos dos equipamentos do EmpresTI a partir da API da Pi
 
 # imagens-equipamentos
 
-Raiz dos arquivos: `pratica-sa-051126/skills/imagens-equipamentos/`.
+Raiz dos arquivos: `.pratica/skills/imagens-equipamentos/`.
 O contrato completo está em `references/contrato.md`, os parâmetros da API em `references/pixabay.md`
 e a lista dos 12 equipamentos, com os termos de busca, em `references/equipamentos.json`.
 
 ## Fluxo
 1. Confirme que `PIXABAY_API_KEY` existe no `.env`. Nunca imprima o valor.
 2. `node <raiz>/scripts/prepare.mjs` baixa candidatas, descarta duplicadas, redimensiona para 800×600 e
-   grava `out/images/` e `out/manifest.json`, com `revisao: "pendente"` em cada item.
-3. Revise as fotos uma a uma, abrindo cada arquivo de `out/images/`, pelos critérios de
+   grava `prisma/data/imagens/images/` e `prisma/data/imagens/manifest.json`, com `revisao: "pendente"` em cada item.
+3. Revise as fotos uma a uma, abrindo cada arquivo de `prisma/data/imagens/images/`, pelos critérios de
    `references/contrato.md`. Marque `aprovada` ou `reprovada` com motivo no manifesto.
    Reprovada: rode `prepare.mjs --only TI-000N` de novo; a foto reprovada fica em `reprovadas` e não volta.
    Para escolher a dedo: `--only TI-000N --pick <idPixabay>` (a candidata precisa estar nos resultados da busca) e

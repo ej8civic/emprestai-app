@@ -40,8 +40,8 @@ Se algo não estiver escrito em lugar nenhum, pergunte — não decida.
 ## Estado atual do projeto
 
 Aplicação Next 15 + tRPC + Prisma + Supabase Auth. Specs: 002 (`docs/specs/002-backend-deploy/`) e, da prática,
-003 (dados iniciais) e 004 (solicitar empréstimo) em `pratica-sa-051126/docs/specs/`. As specs 003 e 004 passaram
-pelo verificador; falta o passo humano em produção (`handoff.md`, item 6). `pratica-sa-051126/ENTREGA.md` registra as decisões.
+003 (dados iniciais) e 004 (solicitar empréstimo) em `.pratica/docs/specs/`. As specs 003 e 004 passaram
+pelo verificador; falta o passo humano em produção (`handoff.md`, item 6). `ENTREGA.md` registra as decisões.
 Redesign no estilo Vercel/Turborepo **contraria o ADR-002**, aguardando decisão do time.
 
 Falta (ADR-001, fora das specs): Sentry, rate limit, ESLint/Prettier/husky, convite de usuário pela interface.

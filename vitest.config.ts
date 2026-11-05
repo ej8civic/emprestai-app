@@ -11,7 +11,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.{ts,tsx}", "pratica-sa-051126/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}", ".pratica/**/*.test.ts"],
     testTimeout: 120_000,
     hookTimeout: 180_000,
     // Variáveis só para o `env.ts` não falhar na importação; nenhum teste fala com o Supabase.
