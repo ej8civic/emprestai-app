@@ -264,17 +264,16 @@ describe("solicitar empréstimo (spec 004)", () => {
     expect((err as TRPCError).message).toBe("Bloqueado por atraso.");
   });
 
-  // ERRO PLANTADO (prova do verificador): teste do CA-45 comentado de propósito.
-  // it("test_ca_45_dois_pedidos_simultaneos_ao_mesmo_equipamento_criam_um_so_emprestimo", async () => {
-  //   const x = await makeTenant(t.db, "ca45");
-  //   const outra = await t.db.membership.create({
-  //     data: { tenantId: x.tenant.id, userId: crypto.randomUUID(), role: "COLABORADOR", name: "Outra", email: "outra45@x.test", department: "T" },
-  //   });
-  //   const item = x.equipment[0]!;
-  //   const resultados = await Promise.all([code(as(x.ana).loan.request({ patrimonio: item.patrimonio })), code(as(outra).loan.request({ patrimonio: item.patrimonio }))]);
-  //   expect(resultados.sort()).toEqual(["CONFLICT", "OK"]);
-  //   expect(await t.db.loan.count({ where: { equipmentId: item.id, returnedAt: null } })).toBe(1);
-  // });
+  it("test_ca_45_dois_pedidos_simultaneos_ao_mesmo_equipamento_criam_um_so_emprestimo", async () => {
+    const x = await makeTenant(t.db, "ca45");
+    const outra = await t.db.membership.create({
+      data: { tenantId: x.tenant.id, userId: crypto.randomUUID(), role: "COLABORADOR", name: "Outra", email: "outra45@x.test", department: "T" },
+    });
+    const item = x.equipment[0]!;
+    const resultados = await Promise.all([code(as(x.ana).loan.request({ patrimonio: item.patrimonio })), code(as(outra).loan.request({ patrimonio: item.patrimonio }))]);
+    expect(resultados.sort()).toEqual(["CONFLICT", "OK"]);
+    expect(await t.db.loan.count({ where: { equipmentId: item.id, returnedAt: null } })).toBe(1);
+  });
 
   it("test_ca_46_meus_emprestimos_lista_so_os_em_aberto_cada_um_com_a_data_prevista", async () => {
     const x = await makeTenant(t.db, "ca46");
