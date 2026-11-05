@@ -23,14 +23,14 @@ Tela de catálogo nova, cadastro de equipamento pela interface, importação de 
 - **CA-36** O seed é idempotente: duas execuções não duplicam equipamento, usuário, vínculo nem objeto no Storage.
 - **CA-37** `marcelo.grilo@institutojef.org.br` existe no Auth, com papel COLABORADOR no tenant `suporte_ti`, entra pelo login e tem zero empréstimos. A senha vem de `PROFESSOR_PASSWORD`; não existe em código, seed, log ou git.
 - **CA-38** O seed não cria nenhum empréstimo.
-- **CA-39** O agente consegue preparar as imagens, mas não consegue enviá-las ao Storage de produção nem rodar o seed em produção: o envio exige `SUPABASE_SERVICE_ROLE_KEY`, que só existe no ambiente da pessoa, e o script recusa rodar sem `CONFIRM_PROD=sim`.
+- **CA-39** O agente consegue preparar as imagens (com `PIXABAY_API_KEY` no `.env.local`), mas não consegue enviá-las ao Storage de produção nem rodar o seed em produção: o envio exige `SUPABASE_SERVICE_ROLE_KEY`, que só existe no ambiente da pessoa, e o script recusa rodar sem `CONFIRM_PROD=sim`.
 - **CA-3A** Nenhuma foto com pessoa, marca ou logo legível, texto ou tela com conteúdo. A revisão visual fica no manifesto (aprovada ou reprovada, com motivo).
 
 ## Decisões (conflitos e lacunas)
 
 | tema | o pedido | o que existia | decisão | por quê |
 |---|---|---|---|---|
-| fonte das fotos | só Pexels | Pexels não emite chave nova (página de chave, 2026-11-05) | **Openverse**, API pública, filtrada por licença CC0, domínio público e CC BY | não exige chave; licença e autor vêm em cada resultado |
+| fonte das fotos | só Pexels | Pexels não emite chave nova (página de chave, 2026-11-05) | **Pixabay**, escolhida pelo dono | a API devolve autor, página de origem e a licença é a Pixabay Content License; exige chave gratuita (`PIXABAY_API_KEY`) |
 | manutenção | briefing: TI-0004 e TI-0007 | lista: TI-0004, TI-0007 e TI-0010 | os três da lista | a lista é "use exatamente esta"; decidido pelo dono |
 | formato do patrimônio | TI-0001 | `schemas.ts` aceita só `PAT-0000` | aceitar `AA-0000` a `AAAA-0000` | os 12 da prática não passam no formato antigo; PAT continua válido |
 | `sharp` | briefing manda instalar | `rules/restrictions.md`: biblioteca fora do ADR-001 exige proposta | `devDependency`, só no script local; exceção autorizada pelo dono nesta sessão, emenda proposta no ADR-001 | garante 800×600 por código; não vai para o servidor |

@@ -6,7 +6,7 @@ A regra já existe (`src/server/domain/loan-rules.ts`, `src/server/services/loan
 
 1. `equipment.list` e `equipment.get` devolvem `image` (`url`, `author`, `license`, `sourceUrl`). `EquipmentIcon` ganha foto 4:3 e mantém o ícone quando não há foto.
 2. Catálogo e detalhe mostram a imagem; "Meus empréstimos" já mostra a data prevista.
-3. Rota `/creditos` (somente leitura, exige sessão) e a linha "Fotos: Openverse" no rodapé do catálogo.
+3. Rota `/creditos` (somente leitura, exige sessão) e a linha "Fotos: Pixabay" no rodapé do catálogo.
 4. CSP: `img-src` passa a aceitar o host do Storage do projeto (derivado de `NEXT_PUBLIC_SUPABASE_URL`), sem `unsafe-inline`.
 5. Testes `test_ca_40_...` a `test_ca_48_...`: procedures por `createCaller`; CA-40 e CA-47 também em `e2e/live-check.mjs` (somente leitura em produção).
 6. Os testes `test_prd_*` que já provam a mesma regra ficam; cada CA ganha o seu teste citando o ID, sem perder cobertura.

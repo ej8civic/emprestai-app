@@ -68,6 +68,11 @@ model Equipment {
   description    String?
   notes          String?
   status         EquipmentStatus @default(AVAILABLE)
+  imageUrl       String?         @map("image_url")
+  imageSource    String?         @map("image_source")
+  imageAuthor    String?         @map("image_author")
+  imageLicense   String?         @map("image_license")
+  imageSourceUrl String?         @map("image_source_url")
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant         Tenant          @relation(fields: [tenantId], references: [id])
   loans          Loan[]

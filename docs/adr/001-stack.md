@@ -236,4 +236,4 @@ Autorizada pelo dono do projeto só para esta sessão; o agente propõe e não d
 
 - **`sharp` como `devDependency`**, usada apenas por `skills/imagens-equipamentos` para redimensionar fotos para 800×600 na máquina de quem prepara os dados. Não entra no bundle nem no servidor.
 - **Fotos de equipamento** em bucket público `equipment-images` do Supabase Storage. O envio é feito só por pessoa, com a chave `service_role` fora do alcance do agente.
-- **Fonte das fotos**: Openverse (licenças CC0, domínio público e CC BY), porque a Pexels não emite chave nova. Descartadas: Pixabay e Unsplash, que exigem chave.
+- **Fonte das fotos**: Pixabay (Pixabay Content License, chave gratuita), escolhida pelo dono porque a Pexels não emite chave nova. As fotos são baixadas e hospedadas no nosso bucket, sem hotlink.
