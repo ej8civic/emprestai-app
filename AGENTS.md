@@ -20,7 +20,7 @@ Todos já rodados nesta máquina (Windows, Node 24, Docker Desktop).
 - rodar os testes: `npx vitest run` — precisa do Docker ligado (Testcontainers sobe um Postgres)
 - tipos: `npx tsc --noEmit`
 - aplicar migrations: `npx prisma migrate deploy` (usa `DIRECT_URL`)
-- seed: `npm run db:seed` (idempotente; senhas novas vão para `.seed-credentials.txt`)
+- seed: `npm run db:seed` (idempotente; contra banco remoto exige `PROFESSOR_PASSWORD` e `CONFIRM_PROD=sim`, e é passo de uma pessoa)
 - fumaça no navegador: `node e2e/smoke.mjs` (precisa do app em `BASE_URL` e de Edge instalado)
 
 Não existe "banco local" configurado no repositório: a verificação local usou
@@ -39,12 +39,13 @@ Se algo não estiver escrito em lugar nenhum, pergunte — não decida.
 
 ## Estado atual do projeto
 
-Aplicação Next 15 + tRPC + Prisma + Supabase Auth, spec 002 (`docs/specs/002-backend-deploy/`).
-As seis telas estão ligadas ao banco. Redesign no estilo Vercel/Turborepo **contraria o
-ADR-002** — aguardando decisão do time (ver `handoff.md`).
+Aplicação Next 15 + tRPC + Prisma + Supabase Auth. Specs: 002 (`docs/specs/002-backend-deploy/`) e, da prática,
+003 (dados iniciais) e 004 (solicitar empréstimo) em `pratica-sa-051126/docs/specs/`. As specs 003 e 004 passaram
+pelo verificador; falta o passo humano em produção (`handoff.md`, item 6). `pratica-sa-051126/ENTREGA.md` registra as decisões.
+Redesign no estilo Vercel/Turborepo **contraria o ADR-002**, aguardando decisão do time.
 
-Falta (ADR-001, fora da spec 002): Sentry, GitHub Actions, rate limit, ESLint/Prettier/husky,
-convite de usuário pela interface.
+Falta (ADR-001, fora das specs): Sentry, rate limit, ESLint/Prettier/husky, convite de usuário pela interface.
+CI: `.github/workflows/deploy.yml` (testes e `prisma migrate deploy` em todo push de `main`; a Vercel publica pela integração Git).
 
 ## Procedimentos
 

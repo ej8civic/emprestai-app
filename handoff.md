@@ -1,19 +1,18 @@
 # Handoff
 
-1. **Onde parei** — spec 002 completa (T1–T8). Falta só fechar o signup e aprovar o DDL `harden` (item 6).
-2. **Commitado** — `main` no remote `ejcivic` (github.com/ej8civic/emprestai-app).
-3. **Banco remoto** — projeto Supabase "school stuff" (`ggigxandixmotjktibgt`, us-east-1). Migration `20261023000000_init` aplicada; seed rodado (1 tenant, 8 usuários, 12 itens, 8 empréstimos). Login real testado.
-4. **Publicado** — https://emprestai-app.vercel.app (projeto Vercel `emprestai-app`, conta pessoal, deploy por upload da CLI; sem git conectado). Variáveis em production e preview; DATABASE_URL e DIRECT_URL como sensíveis.
+1. **Onde parei** — specs 003 e 004 prontas e verificadas (PRONTA nas duas). Falta só o passo humano T9 (seção 6) e a tag.
+2. **Commitado** — `main` no remoto `ejcivic` (github.com/ej8civic/emprestai-app), até o commit `67a8507` (verificar com `git log`). Nada pendente, só o `ENTREGA.md` e este arquivo desta rodada.
+3. **Banco local** — não existe banco local configurado; os testes sobem Postgres em Testcontainers (Docker ligado).
+4. **Publicado** — produção: https://emprestai-app.vercel.app (Vercel pela integração Git; `main` publica). O GitHub Actions roda testes e `prisma migrate deploy` no Supabase `ggigxandixmotjktibgt`; a migration `add_equipment_images` já foi aplicada. **Os dados de produção ainda são os de demonstração antigos** (8 usuários, 8 empréstimos, 12 itens PAT-xxxx, sem fotos).
 5. **NÃO fazer**
-   - Não editar a migration `init`: já está no banco. Mudança de schema = migration nova, com o DDL mostrado antes (`rules/migration.md`).
-   - Não escrever ADR: `docs/adr/002-layout.md` está contrariado pelo redesign; o time decide.
-   - Não pôr `unsafe-inline` na CSP. O diálogo é `<dialog>` nativo porque o Radix usa `style.cssText`.
-   - Não confundir `.seed-credentials.txt` (banco remoto) com `.seed-credentials.local-dev.txt` (teste local). Ambos ignorados pelo git.
-   - Senha do banco tem `@`: na URL vai como `%40`.
-6. **Pendências de segurança no Supabase**
-   - Signup está ABERTO (`disable_signup:false`); o ADR-001 exige fechado. Só pelo painel: Authentication > Sign In / Providers.
-   - `_prisma_migrations` sem RLS e `audit_log_append_only` sem `search_path`: migration `harden` proposta, aguardando aprovação do DDL.
-   - Proteção contra senha vazada: painel (depende do plano).
-7. **Verificado** — `tsc` limpo; `vitest` 28/28; `e2e/smoke.mjs` 19/19 (stack local); `e2e/live-check.mjs` 7/7 na URL pública (só leitura; NÃO rodar o smoke completo em produção: ele cadastra e empresta de verdade); bundle do cliente sem segredo.
-8. **Exceção desta sessão** — deploy e Supabase remoto autorizados só para esta tarefa (`rules/restrictions.md` segue valendo).
-9. **Próximo passo** — fechar o signup no painel do Supabase; aprovar o DDL `harden`; depois conectar o repositório na Vercel para o push publicar (hoje o deploy é manual: `npx vercel deploy --prod`).
+   - Não rodar seed, upload, migrate, `vercel` nem ler `.env`: `.claude/settings.json` bloqueia, e a regra da prática é "o agente não escreve em produção".
+   - Não editar `prisma/migrations/*` já aplicadas. Mudança de schema = migration nova, com o DDL mostrado antes (`rules/migration.md`). A `harden` está **proposta e não aprovada**.
+   - Não escrever ADR: o `docs/adr/001-stack.md` tem só uma "Proposta de emenda" (sharp, bucket, Pixabay) para o time decidir; o ADR-002 segue contrariado pelo redesign.
+   - Não pôr `unsafe-inline` na CSP; o diálogo é `<dialog>` nativo.
+   - Não rodar `e2e/smoke.mjs` nem `e2e/live-check.mjs` (dados antigos) em produção; `live-check-fluxo.mjs` ESCREVE e só a pessoa roda, com `teste@`.
+   - Não tocar na conta do professor (`marcelo.grilo@institutojef.org.br`): precisa chegar à correção com zero empréstimos.
+6. **T9, feito por uma pessoa, nesta ordem** — `pratica-sa-051126/scripts/reset-producao.sql` no SQL Editor; `upload.mjs` (`SUPABASE_SERVICE_ROLE_KEY` e `CONFIRM_PROD=sim` no terminal); `PROFESSOR_PASSWORD=... CONFIRM_PROD=sim npm run db:seed`; depois `e2e/live-check-dados.mjs`, `live-check-catalogo.mjs`, `live-check-fluxo.mjs`.
+7. **Também de uma pessoa** — fechar o cadastro no painel do Supabase; decidir a `harden`; `git tag entrega-pratica && git push origin entrega-pratica` (só depois do T9).
+8. **Verificar** — `npx vitest run` (61 testes), `npx tsc --noEmit` e `npm run build` passam. Os três scripts `live-check-*` **nunca foram executados**.
+9. **Decisões a confirmar** — CA-49 (colaborador não vê quem está com o item) e o `.claude/settings.json` foram iniciativa do agente; ver seção 2 do `ENTREGA.md`.
+10. **Próximo passo** — rode o T9 e me diga o resultado dos três `live-check-*`.
