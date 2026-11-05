@@ -366,4 +366,15 @@ describe("RLS no banco (defesa em profundidade)", () => {
     expect(await t.db.equipment.count({ where: { name: "hack" } })).toBe(0);
     expect(await t.pg("select 1 from audit_log", asUser(a.ana.userId))).toHaveLength(0);
   });
+
+  it("test_rls_harden_liga_rls_na_tabela_do_prisma_e_fixa_o_search_path_da_funcao_de_auditoria", async () => {
+    const [tabela] = await t.pg<{ rls: boolean }>("select relrowsecurity as rls from pg_class where oid = 'public._prisma_migrations'::regclass");
+    expect(tabela?.rls).toBe(true);
+    const [fn] = await t.pg<{ cfg: string[] | null }>("select proconfig as cfg from pg_proc where proname = 'audit_log_append_only'");
+    expect(fn?.cfg).toContain('search_path=""');
+    // O comportamento não mudou: a auditoria continua append-only.
+    const x = await makeTenant(t.db, "harden");
+    await as(x.ana).loan.request({ patrimonio: x.equipment[0]!.patrimonio });
+    await expect(t.pg("update audit_log set action = action")).rejects.toThrow(/append-only/);
+  });
 });

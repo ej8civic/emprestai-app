@@ -14,6 +14,7 @@ const SUPABASE_SHIM = `
   create schema auth;
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  create table public._prisma_migrations (id varchar(36) primary key); -- o Prisma a cria em produção
   create schema extensions;
   create extension pgcrypto schema extensions;
   create table auth.users (
