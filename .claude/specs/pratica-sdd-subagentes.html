@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prática — subagente, skill e as duas primeiras specs</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050a14;
+  --cyan: #00e5ff;
+  --green: #00ff88;
+  --orange: #ff6b35;
+  --purple: #7c3aed;
+  --pink: #f472b6;
+  --yellow: #ffd500;
+  --text: #e8f4f8;
+  --muted: #7fa8c0;
+  --card: rgba(255,255,255,0.04);
+  --border: rgba(0,229,255,0.15);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans-serif; }
+
+#bg { position:fixed; inset:0; z-index:0; opacity:.3; pointer-events:none; }
+#progress-bar { position:fixed; top:0; left:0; height:3px; z-index:200;
+  background:linear-gradient(90deg, var(--cyan), var(--purple)); transition: width .4s ease; }
+
+#topbar {
+  position:fixed; top:0; left:0; right:0; height:52px; z-index:150;
+  background:rgba(5,10,20,.88); backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; padding:0 32px;
+}
+.tb-label { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--cyan); letter-spacing:2px; text-transform:uppercase; }
+.tb-counter { font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--muted); }
+.tb-title { font-size:13px; color:var(--muted); max-width:360px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+#slides { position:fixed; inset:0; z-index:1; }
+.slide {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; justify-content:flex-start; align-items:center;
+  padding:72px 60px 80px;
+  opacity:0; pointer-events:none;
+  transition: opacity .5s ease, transform .5s ease;
+  transform: translateX(60px);
+  overflow-y: auto;
+}
+.slide.active { opacity:1; pointer-events:all; transform:translateX(0); }
+.slide.prev   { opacity:0; pointer-events:none; transform:translateX(-60px); }
+.slide-inner { width:100%; max-width:1060px; margin:auto 0; }
+.slide-scroll { overflow-y:auto; max-height:calc(100vh - 140px); padding-right:8px; }
+.slide-scroll::-webkit-scrollbar { width:4px; }
+.slide-scroll::-webkit-scrollbar-thumb { background:rgba(0,229,255,.2); border-radius:2px; }
+
+#nav-prev, #nav-next {
+  position:fixed; top:50%; z-index:200; transform:translateY(-50%);
+  width:48px; height:48px; border-radius:50%;
+  border:1px solid var(--border); background:rgba(5,10,20,.7);
+  backdrop-filter:blur(8px); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; color:var(--cyan); transition:all .2s; user-select:none;
+}
+#nav-prev { left:16px; } #nav-next { right:16px; }
+#nav-prev:hover, #nav-next:hover { background:rgba(0,229,255,.12); border-color:var(--cyan); }
+#nav-prev.disabled, #nav-next.disabled { opacity:.25; pointer-events:none; }
+
+#dots { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); display:flex; gap:7px; z-index:200; }
+.dot { width:7px; height:7px; border-radius:50%; background:var(--muted); opacity:.4; cursor:pointer; transition:all .3s; }
+.dot.active { background:var(--cyan); opacity:1; transform:scale(1.3); }
+
+.tag  { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--cyan);   letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+.gtag { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--green);  letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+.ptag { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--purple); letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+.otag { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--orange); letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+
+h1.hero-title { font-family:'Syne',sans-serif; font-size:clamp(2.2rem,4.6vw,4.2rem); font-weight:800; line-height:1.05; margin-bottom:20px; }
+h2.sec-title  { font-family:'Syne',sans-serif; font-size:clamp(1.5rem,3.3vw,2.5rem); font-weight:800; line-height:1.15; margin-bottom:12px; }
+h3.slide-h3   { font-family:'Syne',sans-serif; font-size:1.2rem; font-weight:700; margin-bottom:16px; }
+p.lead { color:var(--muted); font-size:1rem; line-height:1.7; margin-bottom:24px; }
+
+.badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(0,229,255,.08); border:1px solid var(--border);
+  border-radius:20px; padding:6px 16px;
+  font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--cyan); letter-spacing:1px;
+  margin-bottom:28px; width:fit-content;
+}
+.badge::before { content:''; width:7px; height:7px; background:var(--green); border-radius:50%; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.5)} }
+
+.hero-q {
+  background:linear-gradient(135deg,rgba(0,229,255,.06),rgba(124,58,237,.06));
+  border:1px solid rgba(0,229,255,.2); border-left:4px solid var(--cyan);
+  border-radius:12px; padding:22px 28px; font-size:1.1rem; font-style:italic; color:var(--text);
+  max-width:760px; margin-top:8px;
+}
+
+.card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; }
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr}}
+
+.tbl { width:100%; border-collapse:collapse; font-size:.84rem; }
+.tbl th { text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--cyan); padding:10px 14px; border-bottom:1px solid var(--border); }
+.tbl td { padding:11px 14px; border-bottom:1px solid rgba(255,255,255,.05); color:var(--muted); vertical-align:top; line-height:1.55; }
+.tbl td strong { color:var(--text); }
+.tbl td code, .tbl th code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+.tbl tbody tr:hover td { background:rgba(0,229,255,.03); }
+
+.hsec { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin-bottom:10px; border-left:3px solid var(--purple); }
+.hsec .hn { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--purple); letter-spacing:1.5px; margin-bottom:5px; }
+.hsec .ht { font-family:'Syne',sans-serif; font-weight:700; font-size:.92rem; margin-bottom:4px; }
+.hsec .hd { color:var(--muted); font-size:.82rem; line-height:1.55; }
+.hsec .hd code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+.hsec.star { border-left-color:var(--orange); background:rgba(255,107,53,.04); }
+.hsec.star .hn { color:var(--orange); }
+.hsec.ok { border-left-color:var(--green); background:rgba(0,255,136,.04); }
+.hsec.ok .hn { color:var(--green); }
+
+.filebox { border:1px solid var(--border); border-radius:12px; overflow:hidden; background:rgba(0,0,0,.42); margin-bottom:14px; }
+.filebox-head { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:rgba(0,229,255,.06); border-bottom:1px solid var(--border);
+  padding:8px 14px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--cyan); letter-spacing:1px; }
+.filebox-head .fb-path::before { content:'▸ '; opacity:.6; }
+.filebox.prompt { border-color:rgba(124,58,237,.35); }
+.filebox.prompt .filebox-head { background:rgba(124,58,237,.1); border-bottom-color:rgba(124,58,237,.35); color:var(--pink); }
+.filebox.prompt .fb-path::before { content:'💬 '; }
+.filebox.out { border-color:rgba(0,255,136,.35); }
+.filebox.out .filebox-head { background:rgba(0,255,136,.08); border-bottom-color:rgba(0,255,136,.35); color:var(--green); }
+.copybtn { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+  border:1px solid var(--border); background:transparent; color:var(--muted);
+  border-radius:6px; padding:4px 10px; cursor:pointer; transition:.2s; }
+.copybtn:hover { border-color:var(--cyan); color:var(--cyan); }
+.copybtn.done { border-color:var(--green); color:var(--green); }
+.filebox pre { padding:14px 18px; font-family:'IBM Plex Mono',monospace; font-size:.74rem;
+  line-height:1.7; overflow-x:auto; white-space:pre; color:#bfe4f2; max-height:370px; overflow-y:auto; }
+.filebox pre::-webkit-scrollbar { width:4px; height:4px; }
+.filebox pre::-webkit-scrollbar-thumb { background:rgba(0,229,255,.2); border-radius:2px; }
+
+.expected { background:rgba(0,255,136,.05); border:1px solid rgba(0,255,136,.25); border-left:3px solid var(--green); border-radius:12px; padding:14px 18px; margin-top:14px; }
+.expected .ex-h { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--green); margin-bottom:8px; }
+.expected li { list-style:none; font-size:.83rem; color:var(--muted); line-height:1.6; padding:3px 0 3px 20px; position:relative; }
+.expected li::before { content:'→'; position:absolute; left:0; color:var(--green); }
+.expected li strong { color:var(--text); }
+.expected li code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+
+.warnbox { background:rgba(255,107,53,.05); border:1px solid rgba(255,107,53,.25); border-left:3px solid var(--orange); border-radius:12px; padding:14px 18px; margin-top:14px; }
+.warnbox .wh { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--orange); margin-bottom:7px; }
+.warnbox p { font-size:.83rem; color:var(--muted); line-height:1.6; }
+.warnbox p strong { color:var(--text); }
+.warnbox p code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+
+.checklist { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+@media(max-width:680px){ .checklist{ grid-template-columns:1fr; } }
+.chk { display:flex; gap:10px; align-items:flex-start; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:11px 14px; font-size:.83rem; color:var(--muted); line-height:1.5; cursor:pointer; transition:.2s; user-select:none; }
+.chk:hover { border-color:var(--cyan); }
+.chk .box { flex-shrink:0; width:16px; height:16px; border:1px solid var(--muted); border-radius:4px; margin-top:2px; display:flex; align-items:center; justify-content:center; font-size:11px; color:transparent; }
+.chk.on { border-color:var(--green); background:rgba(0,255,136,.06); color:var(--text); }
+.chk.on .box { border-color:var(--green); background:var(--green); color:var(--bg); }
+.chk.on .box::before { content:'✓'; }
+.chk code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+
+.practice-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media(max-width:680px){ .practice-grid{ grid-template-columns:1fr; } }
+.practice-card { background:var(--card); border:1px solid var(--border); border-left:3px solid var(--cyan);
+  border-radius:10px; padding:13px 16px; }
+.practice-card b { font-family:'Syne',sans-serif; font-size:.9rem; display:block; margin-bottom:5px; color:var(--text); }
+.practice-card span { font-size:.8rem; color:var(--muted); line-height:1.55; display:block; }
+.practice-card code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.76rem; }
+
+/* ═══ ANIMAÇÃO ═══ */
+.anim .ai { opacity:0; }
+.anim.run .ai { animation:aIn .5s ease forwards; animation-delay:var(--d,0s); }
+@keyframes aIn { from{opacity:0; transform:translateY(-10px)} to{opacity:1; transform:translateY(0)} }
+@media (prefers-reduced-motion: reduce) {
+  .anim .ai { opacity:1 !important; }
+  .anim.run .ai, .badge::before { animation:none !important; }
+  .slide { transition:none !important; }
+}
+.replay { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px;
+  border:1px solid var(--border); background:transparent; color:var(--muted);
+  border-radius:8px; padding:6px 16px; cursor:pointer; transition:.2s; }
+.replay:hover { border-color:var(--cyan); color:var(--cyan); }
+.replay.big { border-color:var(--green); color:var(--green); padding:9px 22px; font-size:12px; }
+.replay.big:hover { background:rgba(0,255,136,.1); }
+
+.stepnum { display:inline-flex; align-items:center; gap:9px; font-family:'IBM Plex Mono',monospace;
+  font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--cyan);
+  border:1px solid var(--border); border-radius:20px; padding:5px 14px; margin-bottom:12px; }
+.stepnum.o { color:var(--orange); border-color:rgba(255,107,53,.35); }
+.stepnum.g { color:var(--green); border-color:rgba(0,255,136,.35); }
+.stepnum.p { color:var(--purple); border-color:rgba(124,58,237,.4); }
+
+/* ═══ ACORDEÃO ═══ */
+.acc { display:flex; flex-direction:column; gap:9px; }
+.acc-item { border:1px solid var(--border); border-radius:12px; background:var(--card); overflow:hidden; }
+.acc-head { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; user-select:none; transition:.2s; }
+.acc-head:hover { background:rgba(0,229,255,.05); }
+.acc-badge { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1.4px; text-transform:uppercase;
+  color:var(--bg); background:var(--cyan); border-radius:20px; padding:3px 10px; flex-shrink:0; }
+.acc-badge.mk { background:var(--green); }
+.acc-badge.wr { background:var(--orange); }
+.acc-q { font-family:'Syne',sans-serif; font-weight:700; font-size:.88rem; flex:1; line-height:1.35; }
+.acc-mode { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); flex-shrink:0; }
+.acc-tog { color:var(--muted); font-size:.8rem; transition:transform .25s; flex-shrink:0; }
+.acc-item.open .acc-tog { transform:rotate(180deg); }
+.acc-body { display:none; padding:0 16px 16px; border-top:1px solid rgba(255,255,255,.06); }
+.acc-item.open .acc-body { display:block; animation:aIn .3s ease; }
+.acc-body p { font-size:.83rem; color:var(--muted); line-height:1.65; margin:12px 0; }
+.acc-body p strong { color:var(--text); }
+.acc-body code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+
+/* ═══ ABAS ═══ */
+.vtabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.vtab { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1.2px; text-transform:uppercase;
+  border:1px solid var(--border); background:transparent; color:var(--muted);
+  border-radius:8px; padding:7px 16px; cursor:pointer; transition:.2s; }
+.vtab:hover { border-color:var(--cyan); color:var(--cyan); }
+.vtab.on { background:rgba(0,229,255,.12); border-color:var(--cyan); color:var(--cyan); }
+.vpane { display:none; }
+.vpane.on { display:block; animation:aIn .3s ease; }
+
+/* ═══ INVENTÁRIO ═══ */
+.inv { display:flex; flex-direction:column; gap:7px; }
+.invrow { display:grid; grid-template-columns:34px 1fr 130px; gap:14px; align-items:center;
+  border:1px solid var(--border); border-radius:11px; background:var(--card); padding:10px 15px; }
+@media(max-width:720px){ .invrow{ grid-template-columns:28px 1fr; } .invrow .iv-s{ grid-column:1/-1; text-align:left; } }
+.invrow .iv-i { font-size:1rem; text-align:center; }
+.invrow .iv-t { font-size:.84rem; color:var(--text); line-height:1.45; }
+.invrow .iv-t span { color:var(--muted); }
+.invrow .iv-s { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1.3px;
+  text-transform:uppercase; text-align:right; }
+.invrow.done { border-color:rgba(0,255,136,.3); }
+.invrow.done .iv-s { color:var(--green); }
+.invrow.miss { border-color:rgba(255,107,53,.38); background:rgba(255,107,53,.05); }
+.invrow.miss .iv-s { color:var(--orange); }
+
+/* ═══ FLUXOGRAMA SVG ═══ */
+.svgwrap { border:1px solid var(--border); border-radius:14px; background:rgba(0,0,0,.25); padding:10px; overflow-x:auto; }
+.svgwrap svg { width:100%; min-width:680px; height:auto; display:block; }
+.fdec { fill:rgba(124,58,237,.12); stroke:var(--purple); stroke-width:1.2; }
+.fleaf { fill:rgba(0,229,255,.08); stroke:var(--cyan); stroke-width:1.2; }
+.fleaf.g { fill:rgba(0,255,136,.08); stroke:var(--green); }
+.fleaf.o { fill:rgba(255,107,53,.08); stroke:var(--orange); }
+.fline { stroke:rgba(127,168,192,.45); stroke-width:1.1; fill:none; }
+.ftx { fill:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:12px; }
+.ftm { fill:#bfe4f2; font-family:'IBM Plex Mono',monospace; font-size:11.5px; }
+.fts { fill:var(--muted); font-family:'IBM Plex Sans',sans-serif; font-size:10.5px; }
+.fyn { fill:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; }
+
+/* ═══ ESCOLHA ÚNICA (cards) ═══ */
+.pick { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+@media(max-width:760px){ .pick{ grid-template-columns:1fr; } }
+.pick.two { grid-template-columns:1fr 1fr; }
+@media(max-width:760px){ .pick.two{ grid-template-columns:1fr; } }
+.pkc { border:1px solid var(--border); border-radius:12px; background:var(--card); padding:14px 16px;
+  cursor:pointer; transition:.2s; user-select:none; }
+.pkc:hover { border-color:var(--cyan); transform:translateY(-2px); }
+.pkc.on { border-color:var(--green); background:rgba(0,255,136,.07); }
+.pkc .pk-t { font-family:'Syne',sans-serif; font-weight:700; font-size:.88rem; margin-bottom:6px; display:flex; align-items:center; gap:7px; }
+.pkc.on .pk-t::after { content:'✓'; color:var(--green); font-size:.8rem; }
+.pkc .pk-d { font-size:.79rem; color:var(--muted); line-height:1.55; }
+.pkc .pk-c { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase;
+  color:var(--orange); margin-top:8px; display:block; }
+
+/* ═══ MATRIZ ═══ */
+.mx { border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.mxrow { display:grid; grid-template-columns:1fr 400px; gap:0; border-top:1px solid rgba(255,255,255,.06); align-items:center; }
+.mxrow:first-child { border-top:none; }
+@media(max-width:820px){ .mxrow{ grid-template-columns:1fr; } }
+.mxrow .mx-a { padding:11px 15px; font-size:.82rem; color:var(--text); line-height:1.45; }
+.mxrow .mx-a code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.76rem; }
+.mxopts { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:5px; padding:8px 12px; }
+.mxb { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.4px;
+  border:1px solid rgba(255,255,255,.12); background:transparent; color:var(--muted);
+  border-radius:6px; padding:7px 4px; cursor:pointer; transition:.15s; text-align:center; }
+.mxb:hover { border-color:var(--cyan); color:var(--cyan); }
+.mxb.on { border-color:var(--green); background:rgba(0,255,136,.14); color:var(--green); }
+.mxb.on.lv3 { border-color:var(--orange); background:rgba(255,107,53,.14); color:var(--orange); }
+.mxhead { display:grid; grid-template-columns:1fr 400px; background:rgba(0,229,255,.07); }
+@media(max-width:820px){ .mxhead{ display:none; } }
+.mxhead .mh-a { padding:9px 15px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.3px; text-transform:uppercase; color:var(--cyan); }
+.mxhead .mh-o { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:5px; padding:9px 12px; }
+.mxhead .mh-o span { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); text-align:center; }
+
+/* ═══ FASES ═══ */
+.ph { display:flex; flex-direction:column; gap:7px; }
+.phrow { display:grid; grid-template-columns:1fr 330px; gap:0; align-items:center;
+  border:1px solid var(--border); border-radius:11px; background:var(--card); }
+@media(max-width:820px){ .phrow{ grid-template-columns:1fr; } }
+.phrow .ph-t { padding:10px 15px; font-size:.82rem; color:var(--text); }
+.phrow .ph-t span { display:block; font-size:.75rem; color:var(--muted); margin-top:2px; line-height:1.4; }
+.phopts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; padding:8px 12px; }
+
+.g2 > *, .g3 > *, .card { min-width:0; }
+.slide-inner { min-width:0; }
+code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.82em; }
+.cp { color:var(--muted); font-size:.83rem; line-height:1.7; }
+.cp strong { color:var(--text); }
+.hd strong, .hsec .hd em { color:var(--text); }
+/* fluxo horizontal */
+.flowrow { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center; }
+.fr-step { display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:12px; background:var(--card); padding:10px 16px; font-size:.86rem; }
+.fr-step b { font-family:'IBM Plex Mono',monospace; color:var(--cyan); }
+.fr-step.o { border-color:rgba(255,107,53,.45); } .fr-step.o b { color:var(--orange); }
+.fr-step.g { border-color:rgba(0,255,136,.45); } .fr-step.g b { color:var(--green); }
+.fr-arrow { color:var(--muted); font-size:1.1rem; }
+/* auditoria */
+.acc-badge.aud-q { background:var(--purple); color:var(--text); }
+.acc-item .aud-v { display:none; }
+.acc-item.open .aud-v { display:inline-block; }
+.acc-item.open .aud-q { display:none; }
+/* regras */
+.rgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+@media(max-width:900px){ .rgrid{ grid-template-columns:1fr 1fr; } }
+@media(max-width:560px){ .rgrid{ grid-template-columns:1fr; } }
+.rcard { border:1px solid var(--border); border-radius:12px; background:var(--card); padding:12px 14px; cursor:pointer; transition:.2s; }
+.rcard:hover { border-color:var(--cyan); }
+.rcard.on { border-color:var(--green); background:rgba(0,255,136,.05); }
+.rc-top { display:flex; flex-direction:column; gap:4px; margin-bottom:8px; }
+.rc-n { font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--cyan); }
+.rc-g { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1px; color:var(--purple); text-transform:uppercase; }
+.rc-d { font-size:.8rem; color:var(--muted); line-height:1.5; }
+.rc-x { display:none; margin-top:9px; padding-top:9px; border-top:1px dashed rgba(0,255,136,.3); font-size:.78rem; color:var(--muted); line-height:1.5; }
+.rc-x b { color:var(--green); font-weight:500; }
+.rcard.on .rc-x { display:block; animation:aIn .3s ease; }
+/* contexto progressivo */
+.ctx { display:flex; flex-direction:column; gap:9px; margin:6px 0 10px; }
+.ctx-row { display:grid; grid-template-columns:170px 1fr; gap:10px; align-items:center; font-size:.76rem; color:var(--muted); }
+.ctx-row.dim { opacity:.75; border-top:1px dashed rgba(255,107,53,.3); padding-top:9px; }
+.ctx-bar { height:12px; background:rgba(255,255,255,.05); border-radius:6px; overflow:hidden; }
+.ctx-bar i { display:block; height:100%; border-radius:6px; transition:width .6s ease; }
+.ctx-txt { font-size:.82rem; color:var(--muted); line-height:1.6; min-height:44px; }
+.ctx-txt strong { color:var(--text); }
+@media(max-width:560px){ .ctx-row{ grid-template-columns:1fr; gap:4px; } }
+/* quiz */
+.qzwrap { display:flex; flex-direction:column; gap:8px; }
+.qz { border:1px solid var(--border); border-radius:12px; background:var(--card); padding:11px 14px; }
+.qz-q { font-size:.86rem; color:var(--text); line-height:1.5; display:flex; gap:10px; align-items:baseline; }
+.qz-n { font-family:'IBM Plex Mono',monospace; font-size:.72rem; color:var(--purple); flex-shrink:0; }
+.qz-o { display:flex; gap:6px; flex-wrap:wrap; margin:9px 0 0 22px; }
+.qzb { font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.6px; border:1px solid rgba(255,255,255,.14); background:transparent; color:var(--muted); border-radius:6px; padding:5px 12px; cursor:pointer; transition:.15s; }
+.qzb:hover { border-color:var(--cyan); color:var(--cyan); }
+.qzb.ok { border-color:var(--green); background:rgba(0,255,136,.14); color:var(--green); }
+.qzb.no { border-color:var(--orange); background:rgba(255,107,53,.12); color:var(--orange); }
+.qz-x { display:none; margin:9px 0 0 22px; font-size:.8rem; color:var(--muted); line-height:1.55; border-left:2px solid var(--green); padding-left:10px; }
+.qz.done .qz-x { display:block; animation:aIn .3s ease; }
+.qz-score { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--green); border:1px solid rgba(0,255,136,.35); border-radius:8px; padding:6px 14px; }
+/* matriz sdd */
+.sddm { display:grid; grid-template-columns:90px repeat(5,1fr); gap:5px; overflow-x:auto; min-width:0; }
+.sm-h { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--cyan); text-align:center; padding:6px 2px; }
+.sm-r { font-family:'IBM Plex Mono',monospace; font-size:.76rem; display:flex; align-items:center; padding:8px; border-radius:8px; background:var(--card); }
+.sm-c { font-size:.72rem; color:var(--muted); line-height:1.35; padding:8px 7px; border-radius:8px; border:1px dashed rgba(255,255,255,.06); min-height:50px; display:flex; align-items:center; }
+.sm-c.on { color:var(--text); border-style:solid; }
+.sm-p { color:var(--purple); } .sm-c.on.sm-p { border-color:rgba(124,58,237,.45); background:rgba(124,58,237,.09); }
+.sm-a { color:var(--cyan); } .sm-c.on.sm-a { border-color:rgba(0,229,255,.4); background:rgba(0,229,255,.07); }
+.sm-g { color:var(--green); } .sm-c.on.sm-g { border-color:rgba(0,255,136,.45); background:rgba(0,255,136,.07); }
+.sm-o { color:var(--orange); } .sm-c.on.sm-o { border-color:rgba(255,107,53,.45); background:rgba(255,107,53,.07); }
+
+.sm-c.neg { color:var(--orange); justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:.68rem; border-color:rgba(255,107,53,.35); }
+@media(max-width:820px){ .sddm{ grid-template-columns:70px repeat(5,minmax(90px,1fr)); } }
+/* graficos */
+.chartbox { border:1px solid var(--border); border-radius:12px; background:rgba(0,0,0,.25); padding:14px; }
+.chartbox svg { width:100%; max-width:560px; height:auto; display:block; margin:0 auto; }
+.cht { fill:var(--text); font-family:'Syne',sans-serif; font-weight:700; font-size:14px; }
+.cht2 { font-family:'Syne',sans-serif; font-weight:700; font-size:.95rem; margin-bottom:8px; }
+.cht2 span { font-family:'IBM Plex Sans',sans-serif; font-weight:400; color:var(--orange); font-size:.8rem; }
+.chl { fill:var(--muted); font-family:'IBM Plex Sans',sans-serif; font-size:11.5px; }
+.chv { fill:var(--text); font-family:'IBM Plex Mono',monospace; font-size:12px; }
+.chs { fill:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:10px; }
+.chnote { font-size:.82rem; color:var(--muted); line-height:1.6; margin-top:10px; max-width:820px; }
+.chnote strong { color:var(--text); }
+.limtab { max-width:560px; margin:0 auto; }
+.vpane.on .bar { animation:grow .7s ease both; transform-origin:left; transform-box:fill-box; }
+.vpane.on .vbar { animation:growv .7s ease both; transform-origin:bottom; transform-box:fill-box; }
+.vpane.on .lpath { stroke-dasharray:900; animation:draw 1.2s ease both; }
+@keyframes grow { from{transform:scaleX(0)} to{transform:scaleX(1)} }
+@keyframes growv { from{transform:scaleY(0)} to{transform:scaleY(1)} }
+@keyframes draw { from{stroke-dashoffset:900} to{stroke-dashoffset:0} }
+/* icones */
+.icgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; transition:color .4s; }
+@media(max-width:600px){ .icgrid{ grid-template-columns:1fr 1fr; } }
+.ic { border:1px solid var(--border); border-radius:12px; background:rgba(0,0,0,.25); padding:16px 10px 12px; text-align:center; position:relative; }
+.ic-svg svg { display:block; margin:0 auto 8px; }
+.ic-n { font-family:'IBM Plex Mono',monospace; font-size:.72rem; color:var(--muted); }
+.ic-b { position:absolute; top:8px; right:8px; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.6px; border:1px solid currentColor; border-radius:10px; padding:2px 7px; }
+/* fluxo mcp */
+.flwrap { display:flex; flex-direction:column; gap:8px; }
+.flw { display:grid; grid-template-columns:120px 1fr; gap:14px; align-items:center; border:1px solid rgba(255,107,53,.28); border-radius:11px; background:var(--card); padding:11px 15px; }
+.flw-k { font-family:'IBM Plex Mono',monospace; font-size:.8rem; color:var(--orange); text-transform:uppercase; letter-spacing:1.5px; }
+.flw-t { font-size:.83rem; color:var(--muted); line-height:1.55; }
+@media(max-width:600px){ .flw{ grid-template-columns:1fr; gap:4px; } }
+@media (prefers-reduced-motion: reduce) { .vpane.on .bar, .vpane.on .vbar, .vpane.on .lpath { animation:none !important; } }
+
+.nxl { stroke:rgba(255,107,53,.45); stroke-width:1.3; }
+.nxl.g { stroke:rgba(0,255,136,.55); stroke-width:1.8; }
+.sqwrap svg { width:100%; max-width:740px; height:auto; display:block; margin:0 auto; }
+.chartbox svg.nxsvg { max-width:760px; }
+.sq-life { stroke:rgba(127,168,192,.25); stroke-dasharray:4 5; }
+.sq-step { cursor:pointer; }
+.sq-ar { stroke:rgba(127,168,192,.35); stroke-width:1.6; transition:.25s; }
+.sq-hd { fill:rgba(127,168,192,.35); transition:.25s; }
+.sq-tx { fill:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:11.5px; transition:.25s; }
+.sq-step.past .sq-ar { stroke:rgba(0,229,255,.45); } .sq-step.past .sq-hd { fill:rgba(0,229,255,.45); }
+.sq-step.on .sq-ar { stroke:var(--green); stroke-width:2.6; } .sq-step.on .sq-hd { fill:var(--green); }
+.sq-step.on .sq-tx { fill:var(--text); font-weight:500; }
+.sq-step:hover .sq-tx { fill:var(--cyan); }
+#sqCode { min-height:140px; max-height:300px; overflow:auto; }
+#sqTxt code { font-size:.8em; }
+
+.sm-w { color:var(--text); } .sm-c.on.sm-w { border-color:rgba(255,255,255,.25); background:rgba(255,255,255,.05); }
+.sddm { grid-template-columns:110px repeat(5,1fr) !important; }
+#saTxt code { font-size:.82em; }
+
+html { height:auto !important; overflow-x:hidden !important; overflow-y:auto !important; }
+body { height:auto !important; overflow:visible !important; }
+code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.82em; }
+.wrap { position:relative; z-index:1; max-width:1120px; margin:0 auto; padding:84px 24px 80px; }
+.hero { padding:20px 0 34px; border-bottom:1px solid var(--border); margin-bottom:10px; }
+.layout { display:grid; grid-template-columns:230px 1fr; gap:34px; align-items:start; }
+@media(max-width:900px){ .layout{ grid-template-columns:1fr; } .toc{ display:none; } }
+.toc { position:sticky; top:72px; display:flex; flex-direction:column; gap:4px; }
+.navl { display:flex; gap:10px; align-items:baseline; color:var(--muted); text-decoration:none; font-size:.82rem; padding:7px 10px; border-radius:8px; border-left:2px solid transparent; transition:.2s; line-height:1.35; }
+.navl span { font-family:'IBM Plex Mono',monospace; font-size:.7rem; color:var(--purple); }
+.navl:hover { color:var(--text); background:rgba(0,229,255,.05); }
+.navl.on { color:var(--text); border-left-color:var(--cyan); background:rgba(0,229,255,.07); }
+.sec { padding:34px 0 26px; border-bottom:1px solid rgba(255,255,255,.06); scroll-margin-top:70px; }
+.sec-head { display:flex; gap:18px; align-items:flex-start; margin-bottom:8px; }
+.sec-num { font-family:'IBM Plex Mono',monospace; font-size:.8rem; color:var(--cyan); border:1px solid var(--border); border-radius:8px; padding:6px 9px; margin-top:6px; flex-shrink:0; }
+.sec .lead strong, .hero .lead strong { color:var(--text); }
+.g2 > *, .g3 > *, .card { min-width:0; }
+.flowrow { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center; }
+.fr-step { display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:12px; background:var(--card); padding:10px 16px; font-size:.86rem; }
+.fr-step b { font-family:'IBM Plex Mono',monospace; color:var(--cyan); }
+.fr-step.o { border-color:rgba(255,107,53,.45); } .fr-step.o b { color:var(--orange); }
+.fr-step.g { border-color:rgba(0,255,136,.45); } .fr-step.g b { color:var(--green); }
+.fr-arrow { color:var(--muted); font-size:1.1rem; }
+.hd strong { color:var(--text); }
+.tbl td code { font-size:.76rem; }
+.filebox pre { max-height:440px; }
+.layout > *, main, .sec-head > div { min-width:0; }
+.sec-head > div { flex:1; }
+@media(max-width:700px){
+  .wrap { padding:72px 16px 60px; }
+  #topbar { padding:0 16px; }
+  .tb-title { display:none; }
+  .sec-head { flex-direction:column; gap:8px; }
+  .sec-num { margin-top:0; }
+  .g2, .g3 { grid-template-columns:1fr; }
+  .tbl th, .tbl td { padding:8px 9px; }
+}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div id="progress-bar" style="width:0"></div>
+<div id="topbar">
+  <span class="tb-label">⬡ Prática · SDD</span>
+  <span class="tb-title" id="tbt">Enunciado</span>
+  <span class="tb-counter" id="tbc"></span>
+</div>
+<div class="wrap">
+  <div class="hero">
+    <div class="badge">PRÁTICA · SUBAGENTES, SKILLS E SDD</div>
+    <h1 class="hero-title">Catálogo com fotos,<br>a conta do professor<br>e o primeiro empréstimo —<br><span style="color:var(--green)">conferidos por um subagente.</span></h1>
+    <p class="lead" style="max-width:840px;">Este documento descreve o que você deve fazer e entregar. Ele não diz como: os briefings trazem o que foi pedido, e transformar isso em specs, skill, subagente e código — <strong>percebendo o que está em aberto ou em conflito e decidindo</strong> — é a prática.</p>
+  </div>
+  <div class="layout">
+    <nav class="toc"><a href="#visao" class="navl" data-s="visao"><span>00</span>O que você vai entregar</a><a href="#regras" class="navl" data-s="regras"><span>01</span>Regras que valem para a prática toda</a><a href="#subagente" class="navl" data-s="subagente"><span>02</span>Entrega 1 · um subagente que confere specs</a><a href="#skill" class="navl" data-s="skill"><span>03</span>Entrega 2 · a skill imagens-equipamentos</a><a href="#spec002" class="navl" data-s="spec002"><span>04</span>Entrega 3 · dados iniciais</a><a href="#spec003" class="navl" data-s="spec003"><span>05</span>Entrega 4 · solicitar empréstimo</a><a href="#entrega" class="navl" data-s="entrega"><span>06</span>Entrega 5 · o ENTREGA.md</a><a href="#conferir" class="navl" data-s="conferir"><span>07</span>Antes de entregar: confira no link de produção</a></nav>
+    <main>
+<section class="sec" id="visao">
+  <div class="sec-head"><span class="sec-num">00</span><div><h2 class="sec-title">O que você vai entregar</h2><p class="lead">O sistema de empréstimo de equipamentos já está no ar com login, tela inicial e landing. Nesta prática ele ganha <strong>catálogo com fotos, a conta do professor e a primeira regra de negócio</strong> — e o agente ganha um subagente para conferir o trabalho e uma skill para cuidar das imagens.</p></div></div>
+  
+  <div class="inv anim" style="margin-bottom:18px;">
+    <div class="invrow miss ai" style="--d:.05s"><div class="iv-i">1</div><div class="iv-t"><strong>Um subagente verificador</strong> <span>— que confere cada spec antes de ela ser dada como pronta</span></div><div class="iv-s">subagente</div></div>
+    <div class="invrow miss ai" style="--d:.12s"><div class="iv-i">2</div><div class="iv-t"><strong>Skill <code>imagens-equipamentos</code></strong> <span>— criada por você, a partir de um contrato</span></div><div class="iv-s">skill</div></div>
+    <div class="invrow miss ai" style="--d:.19s"><div class="iv-i">3</div><div class="iv-t"><strong>Dados iniciais</strong> <span>— 12 equipamentos com foto e a conta do professor, em produção</span></div><div class="iv-s">spec</div></div>
+    <div class="invrow miss ai" style="--d:.26s"><div class="iv-i">4</div><div class="iv-t"><strong>Solicitar empréstimo</strong> <span>— a primeira regra de negócio, em produção</span></div><div class="iv-s">spec</div></div>
+    <div class="invrow miss ai" style="--d:.33s"><div class="iv-i">5</div><div class="iv-t"><strong>ENTREGA.md</strong> <span>— as decisões que você tomou, com alternativas, motivos e evidência</span></div><div class="iv-s">entrega</div></div>
+  </div>
+  <div class="flowrow anim" style="margin-bottom:16px;">
+    <div class="fr-step ai" style="--d:.05s"><b>1</b><span>subagente</span></div><div class="fr-arrow ai" style="--d:.1s">→</div>
+    <div class="fr-step ai" style="--d:.15s"><b>2</b><span>skill de imagens</span></div><div class="fr-arrow ai" style="--d:.2s">→</div>
+    <div class="fr-step ai o" style="--d:.25s"><b>3</b><span>dados no ar</span></div><div class="fr-arrow ai" style="--d:.3s">→</div>
+    <div class="fr-step ai o" style="--d:.35s"><b>4</b><span>empréstimo no ar</span></div><div class="fr-arrow ai" style="--d:.4s">→</div>
+    <div class="fr-step ai g" style="--d:.45s"><b>5</b><span>ENTREGA.md</span></div>
+  </div>
+  <div class="g2">
+    <div class="hsec ok"><div class="hn">a ordem importa</div><div class="hd">Solicitar empréstimo depende dos dados iniciais — sem equipamentos não há o que solicitar. E os dados dependem da skill para ter fotos.</div></div>
+    <div class="hsec"><div class="hn">individual · IA liberada</div><div class="hd">Use o seu agente, as suas rules, skills e MCPs. O agente executa; <strong>quem decide é você</strong> — e a entrega precisa mostrar cada decisão.</div></div>
+  </div>
+</section>
+<section class="sec" id="regras">
+  <div class="sec-head"><span class="sec-num">01</span><div><h2 class="sec-title">Regras que valem para a prática toda</h2><p class="lead">Nada aqui é novo: é o contrato que você já escreveu no seu repositório. Como aplicá-lo nesta prática é com você — e é isso que a sua entrega precisa mostrar.</p></div></div>
+  <div class="checklist" style="grid-template-columns:1fr;"><div class="chk" onclick="tk(this)"><span class="box"></span><span>Toda funcionalidade passa pelo ciclo de SDD do seu repositório. Código antes de spec aprovada não vale.</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>O que o briefing não responde, ou responde de forma conflitante, <strong>não é decidido pelo agente</strong>: é levantado, decidido por você e registrado.</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span><strong>O agente nunca escreve em produção.</strong> Tudo que escreve no banco ou no Storage do deploy é executado por você.</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Nenhuma senha, token ou chave em código ou no histórico do git.</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>A conta do professor é só do professor e precisa chegar à correção <strong>com zero empréstimos</strong>. Para os seus testes, use outra conta.</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Nenhuma spec é declarada pronta sem passar pelo seu subagente verificador.</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>As fontes continuam as mesmas: <strong>regra de negócio</strong> é do <code>docs/PRD.md</code>, <strong>decisão técnica</strong> é dos seus ADRs, <strong>como se trabalha</strong> é das suas rules. Os briefings desta prática são pedidos — e pedidos podem estar incompletos ou errados.</span></div></div>
+  <div class="warnbox"><div class="wh">o que esta prática avalia</div><p>Não a pasta onde cada arquivo ficou. Avalia <strong>as decisões que você tomou e por quê</strong>: o que você percebeu que estava em aberto ou em conflito, o que deixou para o agente e o que não deixou, o que virou regra, teste, script ou ADR. Por isso o <code>ENTREGA.md</code> é a parte central da entrega.</p></div>
+</section>
+<section class="sec" id="subagente">
+  <div class="sec-head"><span class="sec-num">02</span><div><h2 class="sec-title">Entrega 1 · um subagente que confere specs</h2><p class="lead">O conceito você já conhece. A forma é sua: o subagente precisa existir no seu harness e cumprir os requisitos abaixo.</p></div></div>
+  
+  <div class="card" style="padding:6px;margin-bottom:16px;overflow-x:auto;"><table class="tbl">
+    <thead><tr><th style="width:190px;">requisito</th><th>o que precisa ser verdade</th></tr></thead><tbody>
+    <tr><td><strong>Papel</strong></td><td>Confere, com contexto limpo, se a implementação de uma spec atende a cada critério de aceite — e diz qual evidência sustenta cada um.</td></tr>
+    <tr><td><strong>Independência</strong></td><td>Não corrige o que encontra. Quem corrige é o agente principal.</td></tr>
+    <tr><td><strong>Obrigatório</strong></td><td>Nenhuma spec é declarada pronta sem passar por ele — e isso não pode depender de alguém lembrar de pedir.</td></tr>
+    <tr><td><strong>Seguro em produção</strong></td><td>Não consegue publicar, migrar nem escrever no banco do deploy.</td></tr>
+    <tr><td><strong>Comparável</strong></td><td>O resultado de duas rodadas sobre a mesma spec pode ser comparado lado a lado.</td></tr>
+    <tr><td><strong>Provado</strong></td><td>Você mostra, com um erro plantado de propósito, que ele reprova o que deve reprovar.</td></tr>
+  </tbody></table></div>
+  <div class="hsec star"><div class="hn">pedido do tech lead</div><div class="hd">"Para agilizar: quando a única falha for um teste quebrado, o verificador pode corrigir o teste e verificar de novo, sem devolver para o agente principal."</div></div>
+  <div class="hsec"><div class="hn">ponto de partida</div><div class="hd">O subagente verificador visto em sala serve de base. Adaptá-lo ao seu repositório e à sua turma — monolito ou back e front separados — é parte da entrega, e as escolhas que você fizer vão para o <code>ENTREGA.md</code>.</div></div>
+</section>
+<section class="sec" id="skill">
+  <div class="sec-head"><span class="sec-num">03</span><div><h2 class="sec-title">Entrega 2 · a skill imagens-equipamentos</h2><p class="lead">Você cria a skill. O contrato diz <strong>o que ela precisa garantir</strong>; como ela garante — o que é instrução, o que é referência, o que é script, o que é revisão humana — é decisão sua.</p></div></div>
+  
+  <div class="card" style="padding:6px;margin-bottom:16px;overflow-x:auto;"><table class="tbl">
+    <thead><tr><th style="width:190px;">requisito</th><th>o que a skill precisa garantir</th></tr></thead><tbody><tr><td><strong>Fonte</strong></td><td>Só a API do Pexels, com a sua chave gratuita. Nenhuma outra origem de imagem.</td></tr><tr><td><strong>Direito de imagem</strong></td><td>Nenhuma foto com pessoa, marca ou logo legível, texto ou tela com conteúdo chega ao sistema.</td></tr><tr><td><strong>Mesmo tamanho</strong></td><td>Todas as imagens em 800×600. Isso é <strong>garantido</strong>, não apenas pedido.</td></tr><tr><td><strong>Sem repetição</strong></td><td>Uma mesma foto não aparece em dois equipamentos.</td></tr><tr><td><strong>Créditos</strong></td><td>Para cada imagem, fica registrado de onde veio, quem fotografou e sob qual licença.</td></tr><tr><td><strong>Armazenamento</strong></td><td>As imagens ficam num bucket público do Supabase Storage. Repetir o processo não duplica nada.</td></tr><tr><td><strong>Produção</strong></td><td>O agente consegue preparar as imagens, mas não consegue enviá-las ao Supabase do deploy.</td></tr><tr><td><strong>Segredos e dependências</strong></td><td>Nenhuma chave em código ou no git. Nenhuma biblioteca fora do que as suas rules e ADRs permitem.</td></tr><tr><td><strong>Crédito na tela</strong></td><td>A tela que exibe as fotos mostra "Fotos: Pexels" com link — exigência das diretrizes da API.</td></tr></tbody></table></div>
+  <div class="filebox "><div class="filebox-head"><span class="fb-path">lista de equipamentos · use exatamente esta (dados iguais para todos)</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>[
+  { &quot;patrimonio&quot;: &quot;TI-0001&quot;, &quot;nome&quot;: &quot;Notebook 14 polegadas&quot;, &quot;categoria&quot;: &quot;notebook&quot;, &quot;situacao&quot;: &quot;disponivel&quot;, &quot;busca&quot;: &quot;laptop on white desk&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0002&quot;, &quot;nome&quot;: &quot;Notebook 15 polegadas&quot;, &quot;categoria&quot;: &quot;notebook&quot;, &quot;situacao&quot;: &quot;disponivel&quot;, &quot;busca&quot;: &quot;open laptop minimal desk&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0003&quot;, &quot;nome&quot;: &quot;Notebook 13 polegadas&quot;, &quot;categoria&quot;: &quot;notebook&quot;, &quot;situacao&quot;: &quot;disponivel&quot;, &quot;busca&quot;: &quot;laptop closeup keyboard&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0004&quot;, &quot;nome&quot;: &quot;Notebook 15 polegadas&quot;, &quot;categoria&quot;: &quot;notebook&quot;, &quot;situacao&quot;: &quot;manutencao&quot;, &quot;busca&quot;: &quot;closed laptop on table&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0005&quot;, &quot;nome&quot;: &quot;Monitor 24 polegadas&quot;, &quot;categoria&quot;: &quot;monitor&quot;, &quot;situacao&quot;: &quot;disponivel&quot;, &quot;busca&quot;: &quot;computer monitor on desk&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0006&quot;, &quot;nome&quot;: &quot;Monitor 27 polegadas&quot;, &quot;categoria&quot;: &quot;monitor&quot;, &quot;situacao&quot;: &quot;disponivel&quot;, &quot;busca&quot;: &quot;monitor screen office desk&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0007&quot;, &quot;nome&quot;: &quot;Monitor 22 polegadas&quot;, &quot;categoria&quot;: &quot;monitor&quot;, &quot;situacao&quot;: &quot;manutencao&quot;, &quot;busca&quot;: &quot;black computer screen&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0008&quot;, &quot;nome&quot;: &quot;Cabo HDMI 2 m&quot;, &quot;categoria&quot;: &quot;cabo&quot;, &quot;situacao&quot;: &quot;disponivel&quot;, &quot;busca&quot;: &quot;hdmi cable&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0009&quot;, &quot;nome&quot;: &quot;Cabo USB-C 1 m&quot;, &quot;categoria&quot;: &quot;cabo&quot;, &quot;situacao&quot;: &quot;disponivel&quot;, &quot;busca&quot;: &quot;usb cable white background&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0010&quot;, &quot;nome&quot;: &quot;Cabo de rede 3 m&quot;, &quot;categoria&quot;: &quot;cabo&quot;, &quot;situacao&quot;: &quot;manutencao&quot;, &quot;busca&quot;: &quot;ethernet cable&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0011&quot;, &quot;nome&quot;: &quot;Webcam Full HD&quot;, &quot;categoria&quot;: &quot;camera&quot;, &quot;situacao&quot;: &quot;disponivel&quot;, &quot;busca&quot;: &quot;webcam&quot; },
+  { &quot;patrimonio&quot;: &quot;TI-0012&quot;, &quot;nome&quot;: &quot;Câmera compacta&quot;, &quot;categoria&quot;: &quot;camera&quot;, &quot;situacao&quot;: &quot;disponivel&quot;, &quot;busca&quot;: &quot;compact camera on table&quot; }
+]</pre></div>
+  <div class="hsec star"><div class="hn">já existem imagens no seu site?</div><div class="hd"><strong>Imagens de equipamento</strong> só podem vir desta skill: qualquer foto de equipamento que já esteja no projeto é substituída pela saída dela, e a origem antiga deixa de ser usada. <strong>Outras imagens</strong> — landing, logo, ilustrações — estão fora do escopo da prática; se você mexer nelas, registre a decisão.</div></div>
+  <div class="hsec"><div class="hn">documentação</div><div class="hd">A API do Pexels tem documentação pública em <code>pexels.com/api/documentation</code>. Ler a fonte faz parte do trabalho — e é uma boa tarefa para delegar.</div></div>
+</section>
+<section class="sec" id="spec002">
+  <div class="sec-head"><span class="sec-num">04</span><div><h2 class="sec-title">Entrega 3 · dados iniciais</h2><p class="lead">O briefing é a voz de quem pediu. Ele não é a spec: transformá-lo em spec — com o que ele diz, o que ele não diz e o que ele diz de forma incompleta — é o seu trabalho.</p></div></div>
+  
+  <div class="filebox "><div class="filebox-head"><span class="fb-path">briefing · dados iniciais</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>Briefing — dados iniciais
+
+Objetivo: o sistema em produção tem equipamentos reais para mostrar
+e a conta do professor para testar.
+
+1. Equipamentos: os 12 da lista da prática — 4 notebooks,
+   3 monitores, 3 cabos, 2 câmeras.
+2. Cada equipamento tem: patrimônio único, nome, categoria, situação
+   e imagem.
+3. Situação: TI-0004 e TI-0007 em manutenção; os outros 10
+   disponíveis. Nenhum empréstimo é criado nesta etapa.
+4. Imagens: uma por equipamento, obtidas pela skill
+   imagens-equipamentos. Para padronizar o tamanho, instale a
+   biblioteca sharp e redimensione depois do download.
+5. Usuário obrigatório: marcelo.grilo@institutojef.org.br, que entra pelo login do
+   sistema com a senha padrão da turma (Inovacao2026). Começa com zero
+   empréstimos. Para facilitar a correção, deixe a senha escrita no
+   próprio arquivo que popula os dados.
+6. Popular os dados mais de uma vez não pode duplicar nada.
+
+Fora de escopo: tela de catálogo, cadastro de equipamento pela
+interface, importação da planilha.</pre></div>
+  <h3 class="slide-h3" style="margin-top:8px;">Ao final, em produção</h3>
+  <div class="checklist" style="grid-template-columns:1fr;"><div class="chk" onclick="tk(this)"><span class="box"></span><span><code>marcelo.grilo@institutojef.org.br</code> entra no link da Vercel com a senha padrão</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Os 12 equipamentos existem no banco do deploy, cada um com a sua imagem e a situação que você decidiu</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>As imagens abrem pela URL pública, sem login, todas no mesmo tamanho</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Repetir o processo não duplicou nada</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>A spec passou pelo seu subagente verificador</span></div></div>
+</section>
+<section class="sec" id="spec003">
+  <div class="sec-head"><span class="sec-num">05</span><div><h2 class="sec-title">Entrega 4 · solicitar empréstimo</h2><p class="lead">A primeira regra de negócio do sistema. O briefing, o <code>docs/PRD.md</code>, os seus ADRs e as suas rules precisam conversar — e nem sempre concordam. Quem percebe e decide é você.</p></div></div>
+  
+  <div class="filebox "><div class="filebox-head"><span class="fb-path">briefing · solicitar empréstimo</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>Briefing — solicitar empréstimo
+
+Decisão já tomada para a turma: solicitar cria o empréstimo na hora.
+Não há aprovação de Operações nem fila de espera nesta versão.
+
+1. O colaborador logado vê o catálogo: imagem, nome, categoria e
+   situação de cada equipamento.
+2. Só equipamento disponível pode ser solicitado.
+3. Ao solicitar, o empréstimo é criado com devolução prevista para
+   14 dias úteis depois, e o equipamento deixa de estar disponível.
+4. Quem já tem 5 empréstimos em aberto não pode solicitar outro.
+5. Quem tem empréstimo em atraso não pode solicitar outro.
+6. Equipamento em manutenção ou emprestado não pode ser solicitado.
+7. Dois pedidos ao mesmo equipamento ao mesmo tempo: só um é criado.
+8. O colaborador vê os próprios empréstimos em aberto, com a data de
+   devolução prevista.
+9. O catálogo deve ser limpo: só as fotos e os dados do equipamento,
+   sem rodapé nem texto de crédito.
+
+Fora de escopo: devolução, tela de Operações, reserva com data
+futura, notificação por e-mail, renovação.</pre></div>
+  <h3 class="slide-h3" style="margin-top:8px;">Ao final, em produção</h3>
+  <div class="checklist" style="grid-template-columns:1fr;"><div class="chk" onclick="tk(this)"><span class="box"></span><span>O catálogo mostra os 12 equipamentos com imagem</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Equipamento em manutenção não pode ser solicitado — e quais estão em manutenção é uma decisão que você registrou</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Solicitar um disponível cria o empréstimo e o tira do disponível</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>O limite de empréstimos em aberto é respeitado, com o motivo visível para quem foi recusado</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>"Meus empréstimos" mostra os itens em aberto e a data de devolução</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>A spec passou pelo seu subagente verificador</span></div></div>
+</section>
+<section class="sec" id="entrega">
+  <div class="sec-head"><span class="sec-num">06</span><div><h2 class="sec-title">Entrega 5 · o ENTREGA.md</h2><p class="lead">É aqui que a prática é avaliada. O código mostra que funcionou; o <code>ENTREGA.md</code> mostra <strong>se você entendeu por que funcionou</strong> — e o que teria quebrado sem cada decisão.</p></div></div>
+  
+  <div class="g2" style="align-items:start;">
+    <div><div class="filebox "><div class="filebox-head"><span class="fb-path">ENTREGA.md · na raiz do repositório</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre># Entrega da prática
+
+## Links
+- Repositório (turma REST: back e front):
+- Produção (Vercel):
+
+## 1. Conflitos: o que foi pedido contra o que já existia
+Todo pedido desta prática (briefings, requisitos, pedidos do time)
+que contrariava o PRD, um ADR, uma rule, o conceito visto em sala ou
+outro trecho do próprio enunciado.
+
+| pedido | contrariava o quê | o que você fez | por quê | onde ficou registrado | commit |
+|--------|-------------------|----------------|---------|-----------------------|--------|
+
+## 1b. Lacunas: o que foi pedido de forma incompleta
+Tudo que você precisou decidir porque o pedido não dizia.
+Cada decisão também está registrada na spec correspondente.
+
+| spec | o que faltava | alternativas | o que decidiu | por quê | commit |
+|------|---------------|--------------|---------------|---------|--------|
+
+## 2. Onde o agente tentou decidir por você
+Pelo menos um momento em que o agente assumiu algo que não estava
+escrito. Como você percebeu e o que fez.
+
+## 3. Uma decisão que merece (ou não) um ADR
+Escolha uma decisão desta prática com alternativa defensável.
+Ela virou ADR? Por quê — ou por que não?
+
+## 4. A skill imagens-equipamentos
+- O que ficou no SKILL.md, o que ficou em references/, o que virou
+  script — e o critério que você usou para separar.
+- Quais requisitos do contrato são garantidos por código e quais
+  dependem de instrução ou de revisão humana. Por que essa divisão.
+- Como o agente fica impedido de enviar imagens para produção.
+- Fotos reprovadas na revisão visual: quantas e por quê.
+
+## 5. O subagente verificador
+- Como ele é acionado e por que esse gatilho (e não outro).
+- O que ele lê e por que precisa ler, em vez de herdar.
+- O que ele não consegue fazer e como isso é garantido no seu harness.
+- Monolito ou back/front: como a verificação cobre o seu caso.
+
+## 6. O verificador em ação
+- Histórico real: cada rodada que reprovou algo — o CA, a causa,
+  a correção.
+- Prova com erro plantado: o que você plantou, a tabela que voltou,
+  e a confirmação de que o erro foi desfeito — com os dois commits.
+- As tabelas finais das duas specs.
+
+## 7. Uma regra sua que esta prática pôs à prova
+Uma rule, ADR ou instrução que se mostrou incompleta, errada ou em
+conflito com o que a prática pedia. O que aconteceu e o que você mudou.
+
+## 8. O que ficou de fora e o que faria diferente</pre></div></div>
+    <div>
+      <div class="hsec star"><div class="hn">o que conta</div><div class="hd">Decisão com alternativa e motivo. "Usei o que o agente sugeriu" não é decisão; "o agente sugeriu X, eu escolhi Y porque Z" é.</div></div>
+      <div class="hsec star"><div class="hn">o que não conta</div><div class="hd">Descrever onde os arquivos estão. Isso o repositório já mostra.</div></div>
+      <div class="hsec ok"><div class="hn">evidência</div><div class="hd">Toda afirmação aponta para algo verificável no repositório: arquivo e linha, <strong>hash do commit</strong>, tabela do verificador. Decisão que está no <code>ENTREGA.md</code> e não está na spec não conta.</div></div>
+      <div class="hsec star"><div class="hn">o que é conferido</div><div class="hd">O que está em produção precisa bater com o que você decidiu e registrou. Comportamento no link que não aparece em nenhuma decisão é tratado como decisão que ninguém tomou.</div></div>
+      <div class="hsec"><div class="hn">honestidade vale mais que acabamento</div><div class="hd">Um item que não ficou pronto, bem explicado na seção 8, diz mais do que um item "pronto" sem evidência.</div></div>
+      <div class="filebox "><div class="filebox-head"><span class="fb-path">terminal · marcar a entrega</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>git tag entrega-pratica
+git push origin entrega-pratica
+# turma REST: a mesma tag nos dois repositórios</pre></div>
+      <div class="hsec"><div class="hn">o que é entregue</div><div class="hd">O link do repositório no GitHub — com a tag <code>entrega-pratica</code> e o <code>ENTREGA.md</code> na raiz — e o link da Vercel funcionando. O que for commitado depois da tag não entra.</div></div>
+    </div>
+  </div>
+</section>
+<section class="sec" id="conferir">
+  <div class="sec-head"><span class="sec-num">07</span><div><h2 class="sec-title">Antes de entregar: confira no link de produção</h2><p class="lead">É isso que o professor vai fazer no seu link. Rode antes, com <strong>uma conta sua</strong>, e deixe a do professor intacta.</p></div></div>
+  <div class="checklist" style="grid-template-columns:1fr;"><div class="chk" onclick="tk(this)"><span class="box"></span><span>Abrir o link da Vercel e entrar com <code>marcelo.grilo@institutojef.org.br</code> e a senha padrão</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Ver os 12 equipamentos, todos com imagem do mesmo tamanho</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Ver que os equipamentos em manutenção não podem ser solicitados</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Solicitar equipamentos disponíveis: aparecem em "meus empréstimos", com a data de devolução prevista</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Ver que os solicitados deixaram de aparecer como disponíveis</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Chegar ao limite de empréstimos em aberto e receber a recusa com o motivo</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Confirmar que a conta do professor continua com zero empréstimos</span></div></div>
+  <div class="warnbox"><div class="wh">funcionou local e quebrou na Vercel?</div><p>Quase sempre é variável de ambiente que só existe no <code>.env.local</code>. O seu <code>rules/secrets.md</code> avisou.</p></div>
+</section></main>
+  </div>
+</div>
+<script>
+const bgCanvas = document.getElementById('bg'); const bgCtx = bgCanvas.getContext('2d');
+let BW, BH, nodes = [];
+function resizeBg() { BW = bgCanvas.width = window.innerWidth; BH = bgCanvas.height = window.innerHeight; }
+function initNodes() { nodes = []; const n = Math.floor((BW * BH) / 22000);
+  for (let i = 0; i < n; i++) nodes.push({ x:Math.random()*BW, y:Math.random()*BH, vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3, r:Math.random()*2+1 }); }
+resizeBg(); initNodes(); window.addEventListener('resize', () => { resizeBg(); initNodes(); });
+const reduz = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function drawBg() { bgCtx.clearRect(0,0,BW,BH);
+  nodes.forEach(n => { if (!reduz) { n.x+=n.vx; n.y+=n.vy; } if(n.x<0||n.x>BW)n.vx*=-1; if(n.y<0||n.y>BH)n.vy*=-1; });
+  for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++) { const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y, d=Math.sqrt(dx*dx+dy*dy);
+    if (d<120) { bgCtx.beginPath(); bgCtx.moveTo(nodes[i].x,nodes[i].y); bgCtx.lineTo(nodes[j].x,nodes[j].y); bgCtx.strokeStyle='rgba(124,58,237,'+(.15*(1-d/120))+')'; bgCtx.lineWidth=.5; bgCtx.stroke(); } }
+  nodes.forEach(n => { bgCtx.beginPath(); bgCtx.arc(n.x,n.y,n.r,0,Math.PI*2); bgCtx.fillStyle='rgba(0,229,255,.5)'; bgCtx.fill(); });
+  requestAnimationFrame(drawBg); }
+drawBg();
+function cp(btn) { const txt = btn.closest('.filebox').querySelector('pre').innerText;
+  navigator.clipboard.writeText(txt).then(() => { btn.textContent='copiado ✓'; btn.classList.add('done');
+    setTimeout(() => { btn.textContent='copiar'; btn.classList.remove('done'); }, 1800); })
+  .catch(() => { btn.textContent='erro'; setTimeout(() => btn.textContent='copiar', 1500); }); }
+function tk(el) { el.classList.toggle('on'); }
+function ac(head) { head.parentElement.classList.toggle('open'); }
+function vt(btn, id) { const box = btn.closest('.vtabs').parentElement;
+  btn.closest('.vtabs').querySelectorAll('.vtab').forEach(b => b.classList.remove('on')); btn.classList.add('on');
+  box.querySelectorAll(':scope > .vpane').forEach(p => p.classList.toggle('on', p.id === id)); }
+// animações ao entrar na tela
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('run'); io.unobserve(e.target); } }), { threshold:.2 });
+document.querySelectorAll('.anim').forEach(el => io.observe(el));
+// índice e progresso
+const secs = [...document.querySelectorAll('.sec')]; const links = [...document.querySelectorAll('.navl')];
+function onScroll() {
+  const h = document.documentElement; const p = h.scrollTop / Math.max(1, h.scrollHeight - h.clientHeight);
+  document.getElementById('progress-bar').style.width = (p*100) + '%';
+  let atual = secs[0]; secs.forEach(s => { if (s.getBoundingClientRect().top < 140) atual = s; });
+  links.forEach(l => l.classList.toggle('on', l.dataset.s === atual.id));
+  const t = atual.querySelector('.sec-title'); document.getElementById('tbt').textContent = t ? t.textContent : '';
+  document.getElementById('tbc').textContent = (secs.indexOf(atual)+1) + ' / ' + secs.length;
+}
+window.addEventListener('scroll', onScroll, { passive:true }); onScroll();
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+name: deploy
+
+# Todo commit em main publica: testes -> migrations no Supabase -> deploy na Vercel.
+# O seed NUNCA roda aqui (rules/restrictions.md): dado de produção é executado por uma pessoa.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder
+      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+      DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      # Os testes sobem o próprio Postgres (Testcontainers); nunca usam o banco de produção.
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Segredos presentes?
+        env:
+          HAS_VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN != '' }}
+          HAS_VERCEL_ORG: ${{ secrets.VERCEL_ORG_ID != '' }}
+          HAS_VERCEL_PROJECT: ${{ secrets.VERCEL_PROJECT_ID != '' }}
+          HAS_DIRECT_URL: ${{ secrets.DIRECT_URL != '' }}
+          HAS_DATABASE_URL: ${{ secrets.DATABASE_URL != '' }}
+        run: |
+          missing=0
+          for v in VERCEL_TOKEN VERCEL_ORG VERCEL_PROJECT DIRECT_URL DATABASE_URL; do
+            var="HAS_$v"
+            if [ "${!var}" != "true" ]; then echo "::error::secret ausente: $v"; missing=1; fi
+          done
+          exit $missing
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Só migrations já commitadas. Mudança de schema segue rules/migration.md antes de chegar aqui.
+      - name: Migrations no Supabase
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: npx prisma migrate deploy
+      - name: Deploy na Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx vercel@latest build --prod --token="$VERCEL_TOKEN"
+          npx vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"

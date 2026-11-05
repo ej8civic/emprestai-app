@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aula 11 — Subagentes: quem faz cada parte do trabalho</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050a14;
+  --cyan: #00e5ff;
+  --green: #00ff88;
+  --orange: #ff6b35;
+  --purple: #7c3aed;
+  --pink: #f472b6;
+  --yellow: #ffd500;
+  --text: #e8f4f8;
+  --muted: #7fa8c0;
+  --card: rgba(255,255,255,0.04);
+  --border: rgba(0,229,255,0.15);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans-serif; }
+
+#bg { position:fixed; inset:0; z-index:0; opacity:.3; pointer-events:none; }
+#progress-bar { position:fixed; top:0; left:0; height:3px; z-index:200;
+  background:linear-gradient(90deg, var(--cyan), var(--purple)); transition: width .4s ease; }
+
+#topbar {
+  position:fixed; top:0; left:0; right:0; height:52px; z-index:150;
+  background:rgba(5,10,20,.88); backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; padding:0 32px;
+}
+.tb-label { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--cyan); letter-spacing:2px; text-transform:uppercase; }
+.tb-counter { font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--muted); }
+.tb-title { font-size:13px; color:var(--muted); max-width:360px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+#slides { position:fixed; inset:0; z-index:1; }
+.slide {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; justify-content:flex-start; align-items:center;
+  padding:72px 60px 80px;
+  opacity:0; pointer-events:none;
+  transition: opacity .5s ease, transform .5s ease;
+  transform: translateX(60px);
+  overflow-y: auto;
+}
+.slide.active { opacity:1; pointer-events:all; transform:translateX(0); }
+.slide.prev   { opacity:0; pointer-events:none; transform:translateX(-60px); }
+.slide-inner { width:100%; max-width:1060px; margin:auto 0; }
+.slide-scroll { overflow-y:auto; max-height:calc(100vh - 140px); padding-right:8px; }
+.slide-scroll::-webkit-scrollbar { width:4px; }
+.slide-scroll::-webkit-scrollbar-thumb { background:rgba(0,229,255,.2); border-radius:2px; }
+
+#nav-prev, #nav-next {
+  position:fixed; top:50%; z-index:200; transform:translateY(-50%);
+  width:48px; height:48px; border-radius:50%;
+  border:1px solid var(--border); background:rgba(5,10,20,.7);
+  backdrop-filter:blur(8px); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; color:var(--cyan); transition:all .2s; user-select:none;
+}
+#nav-prev { left:16px; } #nav-next { right:16px; }
+#nav-prev:hover, #nav-next:hover { background:rgba(0,229,255,.12); border-color:var(--cyan); }
+#nav-prev.disabled, #nav-next.disabled { opacity:.25; pointer-events:none; }
+
+#dots { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); display:flex; gap:7px; z-index:200; }
+.dot { width:7px; height:7px; border-radius:50%; background:var(--muted); opacity:.4; cursor:pointer; transition:all .3s; }
+.dot.active { background:var(--cyan); opacity:1; transform:scale(1.3); }
+
+.tag  { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--cyan);   letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+.gtag { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--green);  letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+.ptag { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--purple); letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+.otag { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--orange); letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; display:block; }
+
+h1.hero-title { font-family:'Syne',sans-serif; font-size:clamp(2.2rem,4.6vw,4.2rem); font-weight:800; line-height:1.05; margin-bottom:20px; }
+h2.sec-title  { font-family:'Syne',sans-serif; font-size:clamp(1.5rem,3.3vw,2.5rem); font-weight:800; line-height:1.15; margin-bottom:12px; }
+h3.slide-h3   { font-family:'Syne',sans-serif; font-size:1.2rem; font-weight:700; margin-bottom:16px; }
+p.lead { color:var(--muted); font-size:1rem; line-height:1.7; margin-bottom:24px; }
+
+.badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:rgba(0,229,255,.08); border:1px solid var(--border);
+  border-radius:20px; padding:6px 16px;
+  font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--cyan); letter-spacing:1px;
+  margin-bottom:28px; width:fit-content;
+}
+.badge::before { content:''; width:7px; height:7px; background:var(--green); border-radius:50%; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.5)} }
+
+.hero-q {
+  background:linear-gradient(135deg,rgba(0,229,255,.06),rgba(124,58,237,.06));
+  border:1px solid rgba(0,229,255,.2); border-left:4px solid var(--cyan);
+  border-radius:12px; padding:22px 28px; font-size:1.1rem; font-style:italic; color:var(--text);
+  max-width:760px; margin-top:8px;
+}
+
+.card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; }
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr}}
+
+.tbl { width:100%; border-collapse:collapse; font-size:.84rem; }
+.tbl th { text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--cyan); padding:10px 14px; border-bottom:1px solid var(--border); }
+.tbl td { padding:11px 14px; border-bottom:1px solid rgba(255,255,255,.05); color:var(--muted); vertical-align:top; line-height:1.55; }
+.tbl td strong { color:var(--text); }
+.tbl td code, .tbl th code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+.tbl tbody tr:hover td { background:rgba(0,229,255,.03); }
+
+.hsec { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin-bottom:10px; border-left:3px solid var(--purple); }
+.hsec .hn { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--purple); letter-spacing:1.5px; margin-bottom:5px; }
+.hsec .ht { font-family:'Syne',sans-serif; font-weight:700; font-size:.92rem; margin-bottom:4px; }
+.hsec .hd { color:var(--muted); font-size:.82rem; line-height:1.55; }
+.hsec .hd code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+.hsec.star { border-left-color:var(--orange); background:rgba(255,107,53,.04); }
+.hsec.star .hn { color:var(--orange); }
+.hsec.ok { border-left-color:var(--green); background:rgba(0,255,136,.04); }
+.hsec.ok .hn { color:var(--green); }
+
+.filebox { border:1px solid var(--border); border-radius:12px; overflow:hidden; background:rgba(0,0,0,.42); margin-bottom:14px; }
+.filebox-head { display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:rgba(0,229,255,.06); border-bottom:1px solid var(--border);
+  padding:8px 14px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--cyan); letter-spacing:1px; }
+.filebox-head .fb-path::before { content:'▸ '; opacity:.6; }
+.filebox.prompt { border-color:rgba(124,58,237,.35); }
+.filebox.prompt .filebox-head { background:rgba(124,58,237,.1); border-bottom-color:rgba(124,58,237,.35); color:var(--pink); }
+.filebox.prompt .fb-path::before { content:'💬 '; }
+.filebox.out { border-color:rgba(0,255,136,.35); }
+.filebox.out .filebox-head { background:rgba(0,255,136,.08); border-bottom-color:rgba(0,255,136,.35); color:var(--green); }
+.copybtn { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+  border:1px solid var(--border); background:transparent; color:var(--muted);
+  border-radius:6px; padding:4px 10px; cursor:pointer; transition:.2s; }
+.copybtn:hover { border-color:var(--cyan); color:var(--cyan); }
+.copybtn.done { border-color:var(--green); color:var(--green); }
+.filebox pre { padding:14px 18px; font-family:'IBM Plex Mono',monospace; font-size:.74rem;
+  line-height:1.7; overflow-x:auto; white-space:pre; color:#bfe4f2; max-height:370px; overflow-y:auto; }
+.filebox pre::-webkit-scrollbar { width:4px; height:4px; }
+.filebox pre::-webkit-scrollbar-thumb { background:rgba(0,229,255,.2); border-radius:2px; }
+
+.expected { background:rgba(0,255,136,.05); border:1px solid rgba(0,255,136,.25); border-left:3px solid var(--green); border-radius:12px; padding:14px 18px; margin-top:14px; }
+.expected .ex-h { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--green); margin-bottom:8px; }
+.expected li { list-style:none; font-size:.83rem; color:var(--muted); line-height:1.6; padding:3px 0 3px 20px; position:relative; }
+.expected li::before { content:'→'; position:absolute; left:0; color:var(--green); }
+.expected li strong { color:var(--text); }
+.expected li code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+
+.warnbox { background:rgba(255,107,53,.05); border:1px solid rgba(255,107,53,.25); border-left:3px solid var(--orange); border-radius:12px; padding:14px 18px; margin-top:14px; }
+.warnbox .wh { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--orange); margin-bottom:7px; }
+.warnbox p { font-size:.83rem; color:var(--muted); line-height:1.6; }
+.warnbox p strong { color:var(--text); }
+.warnbox p code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+
+.checklist { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+@media(max-width:680px){ .checklist{ grid-template-columns:1fr; } }
+.chk { display:flex; gap:10px; align-items:flex-start; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:11px 14px; font-size:.83rem; color:var(--muted); line-height:1.5; cursor:pointer; transition:.2s; user-select:none; }
+.chk:hover { border-color:var(--cyan); }
+.chk .box { flex-shrink:0; width:16px; height:16px; border:1px solid var(--muted); border-radius:4px; margin-top:2px; display:flex; align-items:center; justify-content:center; font-size:11px; color:transparent; }
+.chk.on { border-color:var(--green); background:rgba(0,255,136,.06); color:var(--text); }
+.chk.on .box { border-color:var(--green); background:var(--green); color:var(--bg); }
+.chk.on .box::before { content:'✓'; }
+.chk code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+
+.practice-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media(max-width:680px){ .practice-grid{ grid-template-columns:1fr; } }
+.practice-card { background:var(--card); border:1px solid var(--border); border-left:3px solid var(--cyan);
+  border-radius:10px; padding:13px 16px; }
+.practice-card b { font-family:'Syne',sans-serif; font-size:.9rem; display:block; margin-bottom:5px; color:var(--text); }
+.practice-card span { font-size:.8rem; color:var(--muted); line-height:1.55; display:block; }
+.practice-card code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.76rem; }
+
+/* ═══ ANIMAÇÃO ═══ */
+.anim .ai { opacity:0; }
+.anim.run .ai { animation:aIn .5s ease forwards; animation-delay:var(--d,0s); }
+@keyframes aIn { from{opacity:0; transform:translateY(-10px)} to{opacity:1; transform:translateY(0)} }
+@media (prefers-reduced-motion: reduce) {
+  .anim .ai { opacity:1 !important; }
+  .anim.run .ai, .badge::before { animation:none !important; }
+  .slide { transition:none !important; }
+}
+.replay { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px;
+  border:1px solid var(--border); background:transparent; color:var(--muted);
+  border-radius:8px; padding:6px 16px; cursor:pointer; transition:.2s; }
+.replay:hover { border-color:var(--cyan); color:var(--cyan); }
+.replay.big { border-color:var(--green); color:var(--green); padding:9px 22px; font-size:12px; }
+.replay.big:hover { background:rgba(0,255,136,.1); }
+
+.stepnum { display:inline-flex; align-items:center; gap:9px; font-family:'IBM Plex Mono',monospace;
+  font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--cyan);
+  border:1px solid var(--border); border-radius:20px; padding:5px 14px; margin-bottom:12px; }
+.stepnum.o { color:var(--orange); border-color:rgba(255,107,53,.35); }
+.stepnum.g { color:var(--green); border-color:rgba(0,255,136,.35); }
+.stepnum.p { color:var(--purple); border-color:rgba(124,58,237,.4); }
+
+/* ═══ ACORDEÃO ═══ */
+.acc { display:flex; flex-direction:column; gap:9px; }
+.acc-item { border:1px solid var(--border); border-radius:12px; background:var(--card); overflow:hidden; }
+.acc-head { display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; user-select:none; transition:.2s; }
+.acc-head:hover { background:rgba(0,229,255,.05); }
+.acc-badge { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1.4px; text-transform:uppercase;
+  color:var(--bg); background:var(--cyan); border-radius:20px; padding:3px 10px; flex-shrink:0; }
+.acc-badge.mk { background:var(--green); }
+.acc-badge.wr { background:var(--orange); }
+.acc-q { font-family:'Syne',sans-serif; font-weight:700; font-size:.88rem; flex:1; line-height:1.35; }
+.acc-mode { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); flex-shrink:0; }
+.acc-tog { color:var(--muted); font-size:.8rem; transition:transform .25s; flex-shrink:0; }
+.acc-item.open .acc-tog { transform:rotate(180deg); }
+.acc-body { display:none; padding:0 16px 16px; border-top:1px solid rgba(255,255,255,.06); }
+.acc-item.open .acc-body { display:block; animation:aIn .3s ease; }
+.acc-body p { font-size:.83rem; color:var(--muted); line-height:1.65; margin:12px 0; }
+.acc-body p strong { color:var(--text); }
+.acc-body code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.78rem; }
+
+/* ═══ ABAS ═══ */
+.vtabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.vtab { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1.2px; text-transform:uppercase;
+  border:1px solid var(--border); background:transparent; color:var(--muted);
+  border-radius:8px; padding:7px 16px; cursor:pointer; transition:.2s; }
+.vtab:hover { border-color:var(--cyan); color:var(--cyan); }
+.vtab.on { background:rgba(0,229,255,.12); border-color:var(--cyan); color:var(--cyan); }
+.vpane { display:none; }
+.vpane.on { display:block; animation:aIn .3s ease; }
+
+/* ═══ INVENTÁRIO ═══ */
+.inv { display:flex; flex-direction:column; gap:7px; }
+.invrow { display:grid; grid-template-columns:34px 1fr 130px; gap:14px; align-items:center;
+  border:1px solid var(--border); border-radius:11px; background:var(--card); padding:10px 15px; }
+@media(max-width:720px){ .invrow{ grid-template-columns:28px 1fr; } .invrow .iv-s{ grid-column:1/-1; text-align:left; } }
+.invrow .iv-i { font-size:1rem; text-align:center; }
+.invrow .iv-t { font-size:.84rem; color:var(--text); line-height:1.45; }
+.invrow .iv-t span { color:var(--muted); }
+.invrow .iv-s { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1.3px;
+  text-transform:uppercase; text-align:right; }
+.invrow.done { border-color:rgba(0,255,136,.3); }
+.invrow.done .iv-s { color:var(--green); }
+.invrow.miss { border-color:rgba(255,107,53,.38); background:rgba(255,107,53,.05); }
+.invrow.miss .iv-s { color:var(--orange); }
+
+/* ═══ FLUXOGRAMA SVG ═══ */
+.svgwrap { border:1px solid var(--border); border-radius:14px; background:rgba(0,0,0,.25); padding:10px; overflow-x:auto; }
+.svgwrap svg { width:100%; min-width:680px; height:auto; display:block; }
+.fdec { fill:rgba(124,58,237,.12); stroke:var(--purple); stroke-width:1.2; }
+.fleaf { fill:rgba(0,229,255,.08); stroke:var(--cyan); stroke-width:1.2; }
+.fleaf.g { fill:rgba(0,255,136,.08); stroke:var(--green); }
+.fleaf.o { fill:rgba(255,107,53,.08); stroke:var(--orange); }
+.fline { stroke:rgba(127,168,192,.45); stroke-width:1.1; fill:none; }
+.ftx { fill:var(--text); font-family:'IBM Plex Sans',sans-serif; font-size:12px; }
+.ftm { fill:#bfe4f2; font-family:'IBM Plex Mono',monospace; font-size:11.5px; }
+.fts { fill:var(--muted); font-family:'IBM Plex Sans',sans-serif; font-size:10.5px; }
+.fyn { fill:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; }
+
+/* ═══ ESCOLHA ÚNICA (cards) ═══ */
+.pick { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+@media(max-width:760px){ .pick{ grid-template-columns:1fr; } }
+.pick.two { grid-template-columns:1fr 1fr; }
+@media(max-width:760px){ .pick.two{ grid-template-columns:1fr; } }
+.pkc { border:1px solid var(--border); border-radius:12px; background:var(--card); padding:14px 16px;
+  cursor:pointer; transition:.2s; user-select:none; }
+.pkc:hover { border-color:var(--cyan); transform:translateY(-2px); }
+.pkc.on { border-color:var(--green); background:rgba(0,255,136,.07); }
+.pkc .pk-t { font-family:'Syne',sans-serif; font-weight:700; font-size:.88rem; margin-bottom:6px; display:flex; align-items:center; gap:7px; }
+.pkc.on .pk-t::after { content:'✓'; color:var(--green); font-size:.8rem; }
+.pkc .pk-d { font-size:.79rem; color:var(--muted); line-height:1.55; }
+.pkc .pk-c { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1.2px; text-transform:uppercase;
+  color:var(--orange); margin-top:8px; display:block; }
+
+/* ═══ MATRIZ ═══ */
+.mx { border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.mxrow { display:grid; grid-template-columns:1fr 400px; gap:0; border-top:1px solid rgba(255,255,255,.06); align-items:center; }
+.mxrow:first-child { border-top:none; }
+@media(max-width:820px){ .mxrow{ grid-template-columns:1fr; } }
+.mxrow .mx-a { padding:11px 15px; font-size:.82rem; color:var(--text); line-height:1.45; }
+.mxrow .mx-a code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.76rem; }
+.mxopts { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:5px; padding:8px 12px; }
+.mxb { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.4px;
+  border:1px solid rgba(255,255,255,.12); background:transparent; color:var(--muted);
+  border-radius:6px; padding:7px 4px; cursor:pointer; transition:.15s; text-align:center; }
+.mxb:hover { border-color:var(--cyan); color:var(--cyan); }
+.mxb.on { border-color:var(--green); background:rgba(0,255,136,.14); color:var(--green); }
+.mxb.on.lv3 { border-color:var(--orange); background:rgba(255,107,53,.14); color:var(--orange); }
+.mxhead { display:grid; grid-template-columns:1fr 400px; background:rgba(0,229,255,.07); }
+@media(max-width:820px){ .mxhead{ display:none; } }
+.mxhead .mh-a { padding:9px 15px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.3px; text-transform:uppercase; color:var(--cyan); }
+.mxhead .mh-o { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:5px; padding:9px 12px; }
+.mxhead .mh-o span { font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.8px; text-transform:uppercase; color:var(--muted); text-align:center; }
+
+/* ═══ FASES ═══ */
+.ph { display:flex; flex-direction:column; gap:7px; }
+.phrow { display:grid; grid-template-columns:1fr 330px; gap:0; align-items:center;
+  border:1px solid var(--border); border-radius:11px; background:var(--card); }
+@media(max-width:820px){ .phrow{ grid-template-columns:1fr; } }
+.phrow .ph-t { padding:10px 15px; font-size:.82rem; color:var(--text); }
+.phrow .ph-t span { display:block; font-size:.75rem; color:var(--muted); margin-top:2px; line-height:1.4; }
+.phopts { display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; padding:8px 12px; }
+
+.g2 > *, .g3 > *, .card { min-width:0; }
+.slide-inner { min-width:0; }
+code { font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-size:.82em; }
+.cp { color:var(--muted); font-size:.83rem; line-height:1.7; }
+.cp strong { color:var(--text); }
+.hd strong, .hsec .hd em { color:var(--text); }
+/* fluxo horizontal */
+.flowrow { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center; }
+.fr-step { display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:12px; background:var(--card); padding:10px 16px; font-size:.86rem; }
+.fr-step b { font-family:'IBM Plex Mono',monospace; color:var(--cyan); }
+.fr-step.o { border-color:rgba(255,107,53,.45); } .fr-step.o b { color:var(--orange); }
+.fr-step.g { border-color:rgba(0,255,136,.45); } .fr-step.g b { color:var(--green); }
+.fr-arrow { color:var(--muted); font-size:1.1rem; }
+/* auditoria */
+.acc-badge.aud-q { background:var(--purple); color:var(--text); }
+.acc-item .aud-v { display:none; }
+.acc-item.open .aud-v { display:inline-block; }
+.acc-item.open .aud-q { display:none; }
+/* regras */
+.rgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+@media(max-width:900px){ .rgrid{ grid-template-columns:1fr 1fr; } }
+@media(max-width:560px){ .rgrid{ grid-template-columns:1fr; } }
+.rcard { border:1px solid var(--border); border-radius:12px; background:var(--card); padding:12px 14px; cursor:pointer; transition:.2s; }
+.rcard:hover { border-color:var(--cyan); }
+.rcard.on { border-color:var(--green); background:rgba(0,255,136,.05); }
+.rc-top { display:flex; flex-direction:column; gap:4px; margin-bottom:8px; }
+.rc-n { font-family:'IBM Plex Mono',monospace; font-size:.76rem; color:var(--cyan); }
+.rc-g { font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1px; color:var(--purple); text-transform:uppercase; }
+.rc-d { font-size:.8rem; color:var(--muted); line-height:1.5; }
+.rc-x { display:none; margin-top:9px; padding-top:9px; border-top:1px dashed rgba(0,255,136,.3); font-size:.78rem; color:var(--muted); line-height:1.5; }
+.rc-x b { color:var(--green); font-weight:500; }
+.rcard.on .rc-x { display:block; animation:aIn .3s ease; }
+/* contexto progressivo */
+.ctx { display:flex; flex-direction:column; gap:9px; margin:6px 0 10px; }
+.ctx-row { display:grid; grid-template-columns:170px 1fr; gap:10px; align-items:center; font-size:.76rem; color:var(--muted); }
+.ctx-row.dim { opacity:.75; border-top:1px dashed rgba(255,107,53,.3); padding-top:9px; }
+.ctx-bar { height:12px; background:rgba(255,255,255,.05); border-radius:6px; overflow:hidden; }
+.ctx-bar i { display:block; height:100%; border-radius:6px; transition:width .6s ease; }
+.ctx-txt { font-size:.82rem; color:var(--muted); line-height:1.6; min-height:44px; }
+.ctx-txt strong { color:var(--text); }
+@media(max-width:560px){ .ctx-row{ grid-template-columns:1fr; gap:4px; } }
+/* quiz */
+.qzwrap { display:flex; flex-direction:column; gap:8px; }
+.qz { border:1px solid var(--border); border-radius:12px; background:var(--card); padding:11px 14px; }
+.qz-q { font-size:.86rem; color:var(--text); line-height:1.5; display:flex; gap:10px; align-items:baseline; }
+.qz-n { font-family:'IBM Plex Mono',monospace; font-size:.72rem; color:var(--purple); flex-shrink:0; }
+.qz-o { display:flex; gap:6px; flex-wrap:wrap; margin:9px 0 0 22px; }
+.qzb { font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.6px; border:1px solid rgba(255,255,255,.14); background:transparent; color:var(--muted); border-radius:6px; padding:5px 12px; cursor:pointer; transition:.15s; }
+.qzb:hover { border-color:var(--cyan); color:var(--cyan); }
+.qzb.ok { border-color:var(--green); background:rgba(0,255,136,.14); color:var(--green); }
+.qzb.no { border-color:var(--orange); background:rgba(255,107,53,.12); color:var(--orange); }
+.qz-x { display:none; margin:9px 0 0 22px; font-size:.8rem; color:var(--muted); line-height:1.55; border-left:2px solid var(--green); padding-left:10px; }
+.qz.done .qz-x { display:block; animation:aIn .3s ease; }
+.qz-score { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--green); border:1px solid rgba(0,255,136,.35); border-radius:8px; padding:6px 14px; }
+/* matriz sdd */
+.sddm { display:grid; grid-template-columns:90px repeat(5,1fr); gap:5px; overflow-x:auto; min-width:0; }
+.sm-h { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--cyan); text-align:center; padding:6px 2px; }
+.sm-r { font-family:'IBM Plex Mono',monospace; font-size:.76rem; display:flex; align-items:center; padding:8px; border-radius:8px; background:var(--card); }
+.sm-c { font-size:.72rem; color:var(--muted); line-height:1.35; padding:8px 7px; border-radius:8px; border:1px dashed rgba(255,255,255,.06); min-height:50px; display:flex; align-items:center; }
+.sm-c.on { color:var(--text); border-style:solid; }
+.sm-p { color:var(--purple); } .sm-c.on.sm-p { border-color:rgba(124,58,237,.45); background:rgba(124,58,237,.09); }
+.sm-a { color:var(--cyan); } .sm-c.on.sm-a { border-color:rgba(0,229,255,.4); background:rgba(0,229,255,.07); }
+.sm-g { color:var(--green); } .sm-c.on.sm-g { border-color:rgba(0,255,136,.45); background:rgba(0,255,136,.07); }
+.sm-o { color:var(--orange); } .sm-c.on.sm-o { border-color:rgba(255,107,53,.45); background:rgba(255,107,53,.07); }
+
+.sm-c.neg { color:var(--orange); justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:.68rem; border-color:rgba(255,107,53,.35); }
+@media(max-width:820px){ .sddm{ grid-template-columns:70px repeat(5,minmax(90px,1fr)); } }
+/* graficos */
+.chartbox { border:1px solid var(--border); border-radius:12px; background:rgba(0,0,0,.25); padding:14px; }
+.chartbox svg { width:100%; max-width:560px; height:auto; display:block; margin:0 auto; }
+.cht { fill:var(--text); font-family:'Syne',sans-serif; font-weight:700; font-size:14px; }
+.cht2 { font-family:'Syne',sans-serif; font-weight:700; font-size:.95rem; margin-bottom:8px; }
+.cht2 span { font-family:'IBM Plex Sans',sans-serif; font-weight:400; color:var(--orange); font-size:.8rem; }
+.chl { fill:var(--muted); font-family:'IBM Plex Sans',sans-serif; font-size:11.5px; }
+.chv { fill:var(--text); font-family:'IBM Plex Mono',monospace; font-size:12px; }
+.chs { fill:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:10px; }
+.chnote { font-size:.82rem; color:var(--muted); line-height:1.6; margin-top:10px; max-width:820px; }
+.chnote strong { color:var(--text); }
+.limtab { max-width:560px; margin:0 auto; }
+.vpane.on .bar { animation:grow .7s ease both; transform-origin:left; transform-box:fill-box; }
+.vpane.on .vbar { animation:growv .7s ease both; transform-origin:bottom; transform-box:fill-box; }
+.vpane.on .lpath { stroke-dasharray:900; animation:draw 1.2s ease both; }
+@keyframes grow { from{transform:scaleX(0)} to{transform:scaleX(1)} }
+@keyframes growv { from{transform:scaleY(0)} to{transform:scaleY(1)} }
+@keyframes draw { from{stroke-dashoffset:900} to{stroke-dashoffset:0} }
+/* icones */
+.icgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; transition:color .4s; }
+@media(max-width:600px){ .icgrid{ grid-template-columns:1fr 1fr; } }
+.ic { border:1px solid var(--border); border-radius:12px; background:rgba(0,0,0,.25); padding:16px 10px 12px; text-align:center; position:relative; }
+.ic-svg svg { display:block; margin:0 auto 8px; }
+.ic-n { font-family:'IBM Plex Mono',monospace; font-size:.72rem; color:var(--muted); }
+.ic-b { position:absolute; top:8px; right:8px; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.6px; border:1px solid currentColor; border-radius:10px; padding:2px 7px; }
+/* fluxo mcp */
+.flwrap { display:flex; flex-direction:column; gap:8px; }
+.flw { display:grid; grid-template-columns:120px 1fr; gap:14px; align-items:center; border:1px solid rgba(255,107,53,.28); border-radius:11px; background:var(--card); padding:11px 15px; }
+.flw-k { font-family:'IBM Plex Mono',monospace; font-size:.8rem; color:var(--orange); text-transform:uppercase; letter-spacing:1.5px; }
+.flw-t { font-size:.83rem; color:var(--muted); line-height:1.55; }
+@media(max-width:600px){ .flw{ grid-template-columns:1fr; gap:4px; } }
+@media (prefers-reduced-motion: reduce) { .vpane.on .bar, .vpane.on .vbar, .vpane.on .lpath { animation:none !important; } }
+
+.nxl { stroke:rgba(255,107,53,.45); stroke-width:1.3; }
+.nxl.g { stroke:rgba(0,255,136,.55); stroke-width:1.8; }
+.sqwrap svg { width:100%; max-width:740px; height:auto; display:block; margin:0 auto; }
+.chartbox svg.nxsvg { max-width:760px; }
+.sq-life { stroke:rgba(127,168,192,.25); stroke-dasharray:4 5; }
+.sq-step { cursor:pointer; }
+.sq-ar { stroke:rgba(127,168,192,.35); stroke-width:1.6; transition:.25s; }
+.sq-hd { fill:rgba(127,168,192,.35); transition:.25s; }
+.sq-tx { fill:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:11.5px; transition:.25s; }
+.sq-step.past .sq-ar { stroke:rgba(0,229,255,.45); } .sq-step.past .sq-hd { fill:rgba(0,229,255,.45); }
+.sq-step.on .sq-ar { stroke:var(--green); stroke-width:2.6; } .sq-step.on .sq-hd { fill:var(--green); }
+.sq-step.on .sq-tx { fill:var(--text); font-weight:500; }
+.sq-step:hover .sq-tx { fill:var(--cyan); }
+#sqCode { min-height:140px; max-height:300px; overflow:auto; }
+#sqTxt code { font-size:.8em; }
+
+.sm-w { color:var(--text); } .sm-c.on.sm-w { border-color:rgba(255,255,255,.25); background:rgba(255,255,255,.05); }
+.sddm { grid-template-columns:110px repeat(5,1fr) !important; }
+#saTxt code { font-size:.82em; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div id="progress-bar"></div>
+<div id="topbar">
+  <span class="tb-label">⬡ Aula 11 — Subagentes</span>
+  <span class="tb-title" id="slide-title-bar"></span>
+  <span class="tb-counter" id="slide-counter"></span>
+</div>
+<div id="nav-prev">←</div>
+<div id="nav-next">→</div>
+<div id="dots"></div>
+<div id="slides">
+<!-- ─── 1 · ABERTURA ─── -->
+<div class="slide active" data-title="Abertura">
+<div class="slide-inner">
+  <div class="badge">SUBAGENTES · AULA 11</div>
+  <h1 class="hero-title">Ele escreveu o código,<br>escreveu o teste<br>e agora diz que está pronto.<br><span style="color:var(--green)">Quem confere?</span></h1>
+  <p class="lead" style="max-width:860px;">O sistema está no ar: banco de pé, deploy na Vercel, uma tela em produção. Até aqui, <strong style="color:var(--text)">um agente só</strong> leu o PRD, explorou o código, implementou, testou e declarou pronto — tudo na mesma janela de contexto. Daqui para frente cada feature nova vai para produção. Hoje ele ganha a capacidade de delegar: abrir outro agente, com outra janela, outra instrução e outras permissões — e o primeiro trabalho delegado vai ser <strong style="color:var(--text)">conferir a tela que já está no ar</strong>.</p>
+  <div class="hero-q">💭 Quando vale a pena ter <strong style="font-style:normal;color:var(--text)">um segundo agente</strong> — e quando isso só multiplica custo e confusão?</div>
+</div>
+</div>
+
+<!-- ─── 2 · ONDE ESTAMOS ─── -->
+<div class="slide" data-title="Onde estamos">
+<div class="slide-inner slide-scroll">
+  <span class="tag">revisão · o que já existe</span>
+  <h2 class="sec-title">O harness já sabe o quê,<br>até onde, como e com o quê.<br>Falta: quem faz.</h2>
+  <p class="lead">Cada camada respondeu uma pergunta. Subagente responde a última: <strong style="color:var(--text)">quem executa esta parte do trabalho, com qual contexto e com qual poder</strong>. E ele não substitui nenhuma camada — ele <strong style="color:var(--text)">usa</strong> todas.</p>
+  <div class="inv anim" style="margin-bottom:16px;">
+    <div class="invrow done ai" style="--d:.04s"><div class="iv-i">📄</div><div class="iv-t"><code>docs/PRD.md</code> · <code>docs/adr/</code> <span>— o que o negócio precisa · stack e design system decididos</span></div><div class="iv-s">pronto</div></div>
+    <div class="invrow done ai" style="--d:.10s"><div class="iv-i">🧭</div><div class="iv-t"><code>AGENTS.md</code> · <code>rules/</code> <span>— contexto do projeto, limite de autoridade, procedimentos</span></div><div class="iv-s">pronto</div></div>
+    <div class="invrow done ai" style="--d:.16s"><div class="iv-i">⚡</div><div class="iv-t"><code>skills/</code> · <code>.mcp.json</code> <span>— como fazer bem · o que ele alcança fora do repositório</span></div><div class="iv-s">pronto</div></div>
+    <div class="invrow done ai" style="--d:.22s"><div class="iv-i">📐</div><div class="iv-t"><code>docs/specs/</code> <span>— spec, plano e tarefas da tela que já foi feita</span></div><div class="iv-s">pronto</div></div>
+    <div class="invrow done ai" style="--d:.28s"><div class="iv-i">▲</div><div class="iv-t">Produção <span>— banco no Supabase, deploy na Vercel, uma tela no ar · tRPC monolito numa turma, REST com back e front na outra</span></div><div class="iv-s">no ar</div></div>
+    <div class="invrow miss ai" style="--d:.36s"><div class="iv-i">🔎</div><div class="iv-t"><strong>Quem confere</strong> <span>— a tela está no ar, mas quem disse que ela atende a spec foi o mesmo agente que a escreveu</span></div><div class="iv-s">hoje</div></div>
+    <div class="invrow miss ai" style="--d:.43s"><div class="iv-i">🧩</div><div class="iv-t"><strong>Quem faz cada parte</strong> <span>— explorar, implementar e verificar ainda acontecem numa janela só</span></div><div class="iv-s">hoje</div></div>
+  </div>
+  <div class="svgwrap anim" style="margin-bottom:14px;">
+  <svg viewBox="0 0 940 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Camadas do harness com subagentes">
+    <g class="ai" style="--d:.05s"><rect x="20" y="16" width="900" height="50" rx="10" class="fleaf"/><text x="40" y="47" class="ftm">AGENTS.md</text><text x="900" y="47" class="ftx" text-anchor="end">o que é verdade aqui</text></g>
+    <g class="ai" style="--d:.15s"><rect x="20" y="76" width="900" height="50" rx="10" class="fleaf"/><text x="40" y="107" class="ftm">rules/</text><text x="900" y="107" class="ftx" text-anchor="end">até onde e como se trabalha</text></g>
+    <g class="ai" style="--d:.25s"><rect x="20" y="136" width="900" height="50" rx="10" class="fleaf"/><text x="40" y="167" class="ftm">docs/adr/ · docs/specs/</text><text x="900" y="167" class="ftx" text-anchor="end">por que é assim · o que construir</text></g>
+    <g class="ai" style="--d:.35s"><rect x="20" y="196" width="900" height="50" rx="10" class="fleaf"/><text x="40" y="227" class="ftm">skills/ · .mcp.json</text><text x="900" y="227" class="ftx" text-anchor="end">como fazer bem · o que ele alcança</text></g>
+    <g class="ai" style="--d:.55s"><rect x="20" y="268" width="900" height="70" rx="10" class="fleaf g"/><text x="40" y="300" class="ftm">agents/</text><text x="40" y="322" class="fts">cada subagente lê as camadas de cima que precisa — e só elas</text>
+      <text x="900" y="310" class="ftx" text-anchor="end">quem executa, com qual contexto e qual poder</text><text x="470" y="262" class="fyn" text-anchor="middle">NOVO HOJE</text></g>
+  </svg></div>
+  <div style="text-align:center;margin-bottom:14px;"><button class="replay" onclick="replay(this)">▸ rodar de novo</button></div>
+  <div class="warnbox"><div class="wh">nome parecido, coisa diferente</div><p><code>AGENTS.md</code> é o contexto do projeto, lido por qualquer agente. <code>agents/</code> é a pasta onde moram os <strong>subagentes</strong> — um arquivo por papel. Mesmo nome de raiz, funções diferentes.</p></div>
+</div>
+</div>
+
+<!-- ─── 3 · O PROBLEMA: UM CONTEXTO SÓ ─── -->
+<div class="slide" data-title="O problema: um contexto só">
+<div class="slide-inner slide-scroll">
+  <span class="otag">o problema · lembra da aula 3?</span>
+  <h2 class="sec-title">Tudo que ele lê<br>fica na janela —<br>inclusive o que não importa</h2>
+  <p class="lead">Para responder "onde a regra de limite de 3 itens deveria ficar?", o agente lê 30 arquivos. A resposta cabe em cinco linhas; os 30 arquivos <strong style="color:var(--text)">continuam ocupando a janela</strong> pelo resto da sessão, competindo com a spec e com as rules. Clique nas etapas.</p>
+  <div class="card" style="margin-bottom:14px;">
+    <div class="vtabs">
+      <button class="vtab on" onclick="cx2(0,this)">1 · início da tarefa</button>
+      <button class="vtab" onclick="cx2(1,this)">2 · sem subagente</button>
+      <button class="vtab" onclick="cx2(2,this)">3 · com subagente</button>
+    </div>
+    <div class="ctx">
+      <div class="ctx-row"><span>AGENTS.md + rules + spec</span><div class="ctx-bar"><i style="width:22%;background:var(--purple)"></i></div></div>
+      <div class="ctx-row"><span>exploração (30 arquivos lidos)</span><div class="ctx-bar"><i id="k1" style="width:0%;background:var(--orange)"></i></div></div>
+      <div class="ctx-row"><span>resumo devolvido</span><div class="ctx-bar"><i id="k2" style="width:0%;background:var(--green)"></i></div></div>
+      <div class="ctx-row"><span>espaço livre para implementar</span><div class="ctx-bar"><i id="k3" style="width:78%;background:var(--cyan)"></i></div></div>
+    </div>
+    <p class="ctx-txt" id="kTxt">A sessão começa leve: contexto do projeto e a spec. Sobra quase tudo para trabalhar.</p>
+  </div>
+  <div class="g2">
+    <div class="hsec star"><div class="hn">custo 1 · espaço</div><div class="hd">Menos espaço para o que importa — e, na aula 3, a gente viu que qualidade cai bem antes da janela encher.</div></div>
+    <div class="hsec star"><div class="hn">custo 2 · contaminação</div><div class="hd">O agente que leu o código para implementar "sabe" o que ele quis fazer. Na hora de verificar, <strong>enxerga a intenção, não o que está escrito</strong>.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ─── 4 · O QUE É UM SUBAGENTE ─── -->
+<div class="slide" data-title="O que é um subagente">
+<div class="slide-inner slide-scroll">
+  <span class="tag">conceito · subagente</span>
+  <h2 class="sec-title">Um agente que o seu agente<br>abre, instrui e espera</h2>
+  <p class="lead">Subagente é uma <strong style="color:var(--text)">outra instância de agente</strong>, criada pelo agente principal para uma tarefa delimitada. Ele começa com a <strong style="color:var(--text)">janela vazia</strong>, recebe a própria instrução, pode ter ferramentas e modelo diferentes, trabalha sozinho e devolve <strong style="color:var(--text)">um único resultado</strong>. Tudo que ele leu no caminho morre com ele.</p>
+  <div class="svgwrap anim" style="margin-bottom:14px;">
+  <svg viewBox="0 0 940 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Agente principal delegando para subagentes">
+    <g class="ai" style="--d:.05s"><rect x="330" y="14" width="280" height="76" rx="12" class="fleaf"/>
+      <text x="470" y="44" class="ftm" text-anchor="middle">agente principal</text><text x="470" y="66" class="fts" text-anchor="middle">conversa com você · decide delegar</text></g>
+    <g class="ai" style="--d:.25s"><path class="fline" d="M400 90 L160 170"/><path class="fline" d="M470 90 L470 170"/><path class="fline" d="M540 90 L780 170"/>
+      <text x="250" y="122" class="fyn">prompt de tarefa</text><text x="700" y="122" class="fyn" text-anchor="end">prompt de tarefa</text></g>
+    <g class="ai" style="--d:.4s"><rect x="40" y="170" width="240" height="96" rx="12" class="fleaf o"/>
+      <text x="160" y="198" class="ftm" text-anchor="middle">explorador</text><text x="160" y="220" class="fts" text-anchor="middle">janela própria · só leitura</text><text x="160" y="240" class="fts" text-anchor="middle">modelo mais rápido</text></g>
+    <g class="ai" style="--d:.5s"><rect x="350" y="170" width="240" height="96" rx="12" class="fleaf o"/>
+      <text x="470" y="198" class="ftm" text-anchor="middle">implementador B</text><text x="470" y="220" class="fts" text-anchor="middle">janela própria · escreve</text><text x="470" y="240" class="fts" text-anchor="middle">tarefa independente</text></g>
+    <g class="ai" style="--d:.6s"><rect x="660" y="170" width="240" height="96" rx="12" class="fleaf g"/>
+      <text x="780" y="198" class="ftm" text-anchor="middle">verificador</text><text x="780" y="220" class="fts" text-anchor="middle">janela própria · não edita</text><text x="780" y="240" class="fts" text-anchor="middle">olhar sem viés</text></g>
+    <g class="ai" style="--d:.8s"><text x="470" y="306" class="ftx" text-anchor="middle">↑ cada um devolve UMA resposta curta — o resto do que leu não volta</text></g>
+  </svg></div>
+  <div style="text-align:center;margin-bottom:14px;"><button class="replay" onclick="replay(this)">▸ rodar de novo</button></div>
+  <div class="g3">
+    <div class="hsec ok"><div class="hn">janela própria</div><div class="hd">Não vê a conversa do principal. Sabe só o que o arquivo dele e o prompt de delegação dizem.</div></div>
+    <div class="hsec ok"><div class="hn">poder próprio</div><div class="hd">Pode ter menos ferramentas que o principal — só leitura, por exemplo — e outro modelo.</div></div>
+    <div class="hsec ok"><div class="hn">saída única</div><div class="hd">O principal recebe um resultado, como recebe o retorno de uma ferramenta. Não acompanha o raciocínio.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ─── 5 · COMO FUNCIONA A DELEGAÇÃO ─── -->
+<div class="slide" data-title="Como funciona a delegação">
+<div class="slide-inner slide-scroll">
+  <span class="tag">por dentro · delegação</span>
+  <h2 class="sec-title">Seis passos —<br>e o mais perigoso<br>é o segundo</h2>
+  <p class="lead">Clique nos passos. Repare que o subagente <strong style="color:var(--text)">nunca fala com você</strong> e <strong style="color:var(--text)">nunca vê a conversa</strong>: ele vive entre um prompt de entrada e um resultado de saída.</p>
+  <div class="card" style="margin-bottom:12px;">
+    <div class="sqwrap"><svg viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sequência de delegação para subagente"><rect x="5" y="10" width="170" height="38" rx="8" class="fdec"/><text x="90" y="34" class="ftx" text-anchor="middle">você</text><line x1="90" y1="48" x2="90" y2="320" class="sq-life"/><rect x="245" y="10" width="170" height="38" rx="8" class="fleaf"/><text x="330" y="34" class="ftx" text-anchor="middle">agente principal</text><line x1="330" y1="48" x2="330" y2="320" class="sq-life"/><rect x="475" y="10" width="170" height="38" rx="8" class="fleaf o"/><text x="560" y="34" class="ftx" text-anchor="middle">subagente</text><line x1="560" y1="48" x2="560" y2="320" class="sq-life"/><g class="sq-step" id="sa0" onclick="saStep(0)"><path d="M330 74 h40 v16 h-34" class="sq-ar" fill="none"/><path d="M332 90 l9 -5 v10 z" class="sq-hd"/><text x="380" y="86" class="sq-tx">1 · decide delegar</text></g><g class="sq-step" id="sa1" onclick="saStep(1)"><line x1="330" y1="124" x2="552" y2="124" class="sq-ar"/><path d="M560 124 l-10 -5 v10 z" class="sq-hd"/><text x="445.0" y="117" class="sq-tx" text-anchor="middle">2 · prompt de delegação</text></g><g class="sq-step" id="sa2" onclick="saStep(2)"><path d="M560 158 h40 v16 h-34" class="sq-ar" fill="none"/><path d="M562 174 l9 -5 v10 z" class="sq-hd"/><text x="610" y="170" class="sq-tx">3 · lê o próprio arquivo e o repositório</text></g><g class="sq-step" id="sa3" onclick="saStep(3)"><path d="M560 200 h40 v16 h-34" class="sq-ar" fill="none"/><path d="M562 216 l9 -5 v10 z" class="sq-hd"/><text x="610" y="212" class="sq-tx">4 · trabalha com as ferramentas dele</text></g><g class="sq-step" id="sa4" onclick="saStep(4)"><line x1="560" y1="250" x2="338" y2="250" class="sq-ar"/><path d="M330 250 l10 -5 v10 z" class="sq-hd"/><text x="445.0" y="243" class="sq-tx" text-anchor="middle">5 · devolve um resultado</text></g><g class="sq-step" id="sa5" onclick="saStep(5)"><line x1="330" y1="292" x2="98" y2="292" class="sq-ar"/><path d="M90 292 l10 -5 v10 z" class="sq-hd"/><text x="210.0" y="285" class="sq-tx" text-anchor="middle">6 · principal decide o próximo passo</text></g></svg></div>
+    <div style="display:flex;gap:8px;justify-content:center;margin:6px 0 10px;">
+      <button class="replay" onclick="saStep(Math.max(0,saCur-1))">◂ anterior</button>
+      <span class="qz-score" id="saN">1 / 6</span>
+      <button class="replay" onclick="saStep(Math.min(5,saCur+1))">próximo ▸</button>
+    </div>
+    <p class="ctx-txt" id="saTxt" style="font-size:.9rem;text-align:center;max-width:820px;margin:0 auto;"></p>
+  </div>
+  <div class="hsec ok"><div class="hn">o retorno sempre volta para quem delegou</div>
+  <div class="ht">O subagente não responde para você — responde para o principal.</div>
+  <div class="hd">Mesmo rodando em segundo plano, o resultado final entra na janela do principal, que decide o que fazer. Duas exceções aparentes: <strong>efeito colateral não "volta", acontece</strong> — se ele editou um arquivo, está editado — e o <strong>pedido de aprovação</strong> de um comando chega direto para você. Se um subagente abre outro, cada um devolve para quem o chamou.</div></div>
+  <div class="hsec star"><div class="hn">a ligação com a aula 9</div>
+  <div class="ht">O prompt de delegação é um handoff — com as mesmas falhas.</div>
+  <div class="hd">Se o principal escreve "verifica se ficou bom", o subagente não sabe qual spec, quais commits, nem o que é "bom". Por isso o arquivo de um bom subagente <strong>lista as entradas obrigatórias e manda parar se faltar alguma</strong>.</div></div>
+</div>
+</div>
+
+
+<!-- ─── + · QUANDO UM SUBAGENTE É ACIONADO ─── -->
+<div class="slide" data-title="Quando um subagente é acionado">
+<div class="slide-inner slide-scroll">
+  <span class="tag">por dentro · gatilho</span>
+  <h2 class="sec-title">Três jeitos de um<br>subagente entrar em cena —<br>do menos ao mais confiável</h2>
+  <p class="lead">Ter o arquivo do subagente não garante que ele seja usado. O que decide é <strong style="color:var(--text)">quem puxa o gatilho</strong>.</p>
+  <div class="g3 anim" style="margin-bottom:14px;">
+    <div class="card ai" style="--d:.05s"><span class="otag">1 · automático</span><p class="cp">O principal lê a <code>description</code> de cada subagente — como faz com skills — e decide delegar. <strong>Probabilístico</strong>: às vezes ele prefere fazer sozinho, sobretudo quando "acha" que já sabe a resposta.</p></div>
+    <div class="card ai" style="--d:.15s"><span class="ptag">2 · pedido explícito</span><p class="cp">Você escreve "use o subagente verificador-spec" ou chama pelo nome, nos harness que permitem. <strong>Confiável</strong>, mas depende de você lembrar — e às onze da noite você não lembra.</p></div>
+    <div class="card ai" style="--d:.25s"><span class="gtag">3 · exigido por regra</span><p class="cp">Uma linha numa rule de procedimento: "antes de declarar a spec pronta, delegue ao verificador". <strong>É o gatilho do SDD</strong>: não depende de o agente achar relevante nem de você lembrar.</p></div>
+  </div>
+  <div class="hsec star"><div class="hn">a régua de sempre</div><div class="ht">Description é sugestão. Rule é contrato.</div>
+  <div class="hd">A mesma lição das skills: o que precisa acontecer toda vez <strong>não pode depender de o modelo achar relevante</strong>. Description boa ajuda o automático; a linha no <code>spec-flow.md</code> garante o essencial.</div></div>
+</div>
+</div>
+<!-- ─── 6 · SUBAGENTE × SKILL × MCP ─── -->
+<div class="slide" data-title="Subagente × skill × MCP">
+<div class="slide-inner slide-scroll">
+  <span class="otag">a pergunta que vai aparecer</span>
+  <h2 class="sec-title">"Isso não é<br>só uma skill?"</h2>
+  <p class="lead">Não. A diferença central é <strong style="color:var(--text)">em qual janela de contexto o trabalho acontece</strong>. Skill ensina o agente atual; subagente é outro agente.</p>
+  <div class="card" style="padding:6px;margin-bottom:16px;overflow-x:auto;"><table class="tbl">
+    <thead><tr><th></th><th>skill</th><th>MCP</th><th>subagente</th><th>sessão nova</th></tr></thead><tbody>
+    <tr><td><strong>entrega</strong></td><td>conhecimento</td><td>acesso externo</td><td>execução delegada</td><td>recomeço manual</td></tr>
+    <tr><td><strong>janela</strong></td><td>a mesma do agente</td><td>a mesma do agente</td><td><strong>outra</strong>, descartada no fim</td><td>outra, que vira a principal</td></tr>
+    <tr><td><strong>quem dispara</strong></td><td>o agente, pela description</td><td>o modelo, ao chamar a tool</td><td>o principal, pela description</td><td>você</td></tr>
+    <tr><td><strong>permissões</strong></td><td>as do agente</td><td>as do servidor</td><td><strong>próprias</strong> — podem ser menores</td><td>as do harness</td></tr>
+    <tr><td><strong>o que volta</strong></td><td>—</td><td>resultado da ferramenta</td><td>um resultado resumido</td><td>nada volta</td></tr>
+  </tbody></table></div>
+  <div class="g2">
+    <div class="hsec ok"><div class="hn">eles se combinam</div><div class="hd">Um subagente revisor pode <strong>usar</strong> a skill de SOLID. Um subagente explorador pode <strong>usar</strong> o MCP do banco em modo leitura. Subagente é o "quem"; skill e MCP são o "como" e o "com o quê".</div></div>
+    <div class="hsec"><div class="hn">sessão nova é o subagente manual</div><div class="hd">Abrir uma conversa limpa e colar uma instrução é exatamente o que um subagente faz — só que sem o principal no meio. É o plano B para harness sem subagentes.</div></div>
+  </div>
+</div>
+</div>
+
+
+<!-- ─── + · SUBAGENTES PRONTOS × CRIADOS ─── -->
+<div class="slide" data-title="Subagentes prontos × criados">
+<div class="slide-inner slide-scroll">
+  <span class="otag">a pergunta que vai aparecer</span>
+  <h2 class="sec-title">"O harness já tem<br>subagentes. Por que<br>criar um?"</h2>
+  <p class="lead">Os principais harness já trazem subagentes embutidos — em geral um de <strong style="color:var(--text)">exploração</strong> (só leitura, modelo mais rápido), um de <strong style="color:var(--text)">planejamento</strong> e um de <strong style="color:var(--text)">uso geral</strong>. Os nomes variam por harness. <strong style="color:var(--text)">Use os prontos sempre que eles bastarem.</strong></p>
+  <div class="card" style="padding:6px;margin-bottom:16px;overflow-x:auto;"><table class="tbl">
+    <thead><tr><th>harness</th><th>subagentes que já vêm prontos</th><th>onde ficam os seus</th><th>formato</th><th>quando delega sozinho</th></tr></thead><tbody>
+    <tr><td><strong>Claude Code</strong></td><td><code>Explore</code> (só leitura, busca no código) · <code>Plan</code> (pesquisa no modo de plano, só leitura) · <code>general-purpose</code> (explora e age) · e alguns auxiliares do próprio harness</td><td><code>.claude/agents/</code> · <code>~/.claude/agents/</code></td><td>.md com frontmatter (<code>tools</code>, <code>model</code>, <code>permissionMode</code>, <code>skills</code>…)</td><td>sim, pela description — ou com <code>@nome</code> / pedido explícito</td></tr>
+    <tr><td><strong>Codex</strong></td><td><code>explorer</code> (leitura pesada) · <code>worker</code> (implementa e corrige) · <code>default</code> (uso geral)</td><td><code>.codex/agents/</code> · <code>~/.codex/agents/</code></td><td><strong>TOML</strong>: <code>name</code>, <code>description</code>, <code>developer_instructions</code></td><td>no CLI/IDE, <strong>só quando você pede</strong> ou quando uma instrução do projeto manda delegar</td></tr>
+    <tr><td><strong>Cursor</strong></td><td><code>Explore</code> (busca no código, modelo mais rápido) · <code>Browser</code> (navegador via MCP, filtra o ruído do DOM)</td><td><code>.cursor/agents/</code> — e também lê <code>.claude/agents/</code> e <code>.codex/agents/</code></td><td>.md com frontmatter (<code>model</code>, <code>readonly</code>, <code>is_background</code>)</td><td>sim, pela description — ou com <code>/nome</code></td></tr>
+    <tr><td><strong>outros</strong></td><td colspan="4">Copilot, Gemini CLI e outros têm recursos equivalentes com nomes e pastas próprios — confiram a documentação do seu harness antes de criar.</td></tr>
+  </tbody></table></div>
+  <p class="chnote" style="margin:-6px 0 16px;">Conferido na documentação oficial de cada harness em outubro de 2026. Nomes e campos mudam rápido — o conceito, não.</p>
+  <div class="card" style="padding:6px;margin-bottom:16px;overflow-x:auto;"><table class="tbl">
+    <thead><tr><th></th><th>pronto (do harness)</th><th>criado (do projeto)</th></tr></thead><tbody>
+    <tr><td><strong>sabe</strong></td><td>explorar, planejar, executar — de forma genérica</td><td>o procedimento <strong>deste</strong> projeto: spec, CA, checks.md</td></tr>
+    <tr><td><strong>critério</strong></td><td>o do fornecedor</td><td>o do time: "sem teste citando o CA = REPROVADO"</td></tr>
+    <tr><td><strong>limites</strong></td><td>os do papel genérico</td><td>os que vocês escreveram: "não corrige"</td></tr>
+    <tr><td><strong>saída</strong></td><td>texto livre</td><td>formato fixo, comparável entre execuções</td></tr>
+    <tr><td><strong>onde mora</strong></td><td>no harness, igual para todo mundo</td><td>no repositório, versionado e revisado em PR</td></tr>
+  </tbody></table></div>
+  <div class="g2">
+    <div class="hsec ok"><div class="hn">regra prática</div><div class="ht">O pronto resolve o genérico. O seu codifica o jeito do time.</div><div class="hd">Crie um só quando existe um <strong>procedimento ou critério do projeto</strong> que o pronto não conhece.</div></div>
+    <div class="hsec star"><div class="hn">o risco do de uso geral</div><div class="ht">Ele foi feito para terminar a tarefa</div><div class="hd">Peça ao <code>general-purpose</code> ou ao <code>worker</code> que "verifique a spec" e, ao achar o problema, ele tende a <strong>consertar</strong> — destruindo o olhar independente que você queria. É exatamente o que o nosso verificador proíbe.</div></div>
+  </div>
+  <div class="g2">
+    <div class="hsec"><div class="hn">o detalhe do Codex</div><div class="hd">No CLI e na IDE ele <strong>não delega por conta própria</strong>: só quando você pede ou quando uma instrução do projeto manda. É exatamente o papel da linha que vamos pôr no <code>spec-flow.md</code> — sem ela, no Codex o verificador nunca roda.</div></div>
+    <div class="hsec"><div class="hn">o detalhe do Claude Code</div><div class="hd"><code>Explore</code> e <code>Plan</code> começam <strong>sem</strong> o arquivo de instruções do projeto, para serem rápidos. Por isso o nosso subagente manda ler AGENTS.md e as rules explicitamente — não presume que herdou.</div></div>
+  </div>
+</div>
+</div>
+<!-- ─── 7 · POR QUE USAR ─── -->
+<div class="slide" data-title="Por que usar">
+<div class="slide-inner slide-scroll">
+  <span class="gtag">por que usar</span>
+  <h2 class="sec-title">Quatro ganhos reais —<br>e todos vêm de<br>separar contexto</h2>
+  <div class="g2 anim" style="margin-bottom:14px;">
+    <div class="card ai" style="--d:.05s"><span class="gtag">1 · janela limpa</span><p class="cp">O trabalho barulhento (ler 30 arquivos, varrer logs, rodar busca) acontece em outra janela. O principal recebe <strong>a conclusão</strong>, não o caminho.</p></div>
+    <div class="card ai" style="--d:.15s"><span class="gtag">2 · olhar sem viés</span><p class="cp">Quem implementou enxerga a intenção. Um verificador que nunca viu a implementação acontecer lê <strong>só o que está escrito</strong> — como um revisor de PR que não estava na sua cabeça.</p></div>
+    <div class="card ai" style="--d:.25s"><span class="gtag">3 · paralelismo</span><p class="cp">Tarefas que não dependem uma da outra e não tocam os mesmos arquivos podem rodar ao mesmo tempo, cada uma na sua janela.</p></div>
+    <div class="card ai" style="--d:.35s"><span class="gtag">4 · poder e custo sob medida</span><p class="cp">O explorador pode ser só leitura e usar um modelo mais rápido. O verificador não edita. <strong>Privilégio mínimo por papel</strong>, a mesma ideia do MCP.</p></div>
+  </div>
+  <div class="hsec star"><div class="hn">o teste de uma frase</div>
+  <div class="ht">"Esta parte do trabalho fica melhor se for feita por alguém que não sabe o que eu sei?"</div>
+  <div class="hd">Se sim — porque o que eu sei é barulho, ou porque é viés — é candidata a subagente. Se a resposta precisa de tudo que está na conversa, não é.</div></div>
+</div>
+</div>
+
+<!-- ─── 8 · O QUE CUSTA ─── -->
+<div class="slide" data-title="O que custa">
+<div class="slide-inner slide-scroll">
+  <span class="otag">o outro lado</span>
+  <h2 class="sec-title">Cada subagente<br>tem um preço</h2>
+  <p class="lead">Subagente não é de graça e não é mais inteligente que o principal. É o mesmo tipo de modelo, <strong style="color:var(--text)">com menos contexto</strong> — o que é virtude em alguns trabalhos e defeito em outros.</p>
+  <div class="g3 anim" style="margin-bottom:14px;">
+    <div class="card ai" style="--d:.05s;border-color:rgba(255,107,53,.32)"><span class="otag">tokens</span><p class="cp">Cada subagente relê AGENTS.md, rules e arquivos. Três subagentes lendo a mesma spec = três leituras pagas.</p></div>
+    <div class="card ai" style="--d:.12s;border-color:rgba(255,107,53,.32)"><span class="otag">perda no handoff</span><p class="cp">O que estava na conversa e não foi para o prompt de delegação se perde. Decisão tomada com você no chat não chega ao subagente.</p></div>
+    <div class="card ai" style="--d:.19s;border-color:rgba(255,107,53,.32)"><span class="otag">conflito em paralelo</span><p class="cp">Dois subagentes editando o mesmo arquivo ao mesmo tempo é merge conflict que ninguém pediu.</p></div>
+    <div class="card ai" style="--d:.26s;border-color:rgba(255,107,53,.32)"><span class="otag">opacidade</span><p class="cp">Você vê o resultado, não o raciocínio. Se ele errou no meio, é mais difícil descobrir onde.</p></div>
+    <div class="card ai" style="--d:.33s;border-color:rgba(255,107,53,.32)"><span class="otag">latência</span><p class="cp">Abrir, ler tudo de novo, trabalhar e voltar leva tempo. Para tarefa pequena, é mais lento que fazer direto.</p></div>
+    <div class="card ai" style="--d:.40s;border-color:rgba(255,107,53,.32)"><span class="otag">o "time" de 8 agentes</span><p class="cp">Um subagente por etapa, cada um passando para o próximo, é o telefone sem fio com conta de token. Comece com <strong>um</strong>.</p></div>
+  </div>
+</div>
+</div>
+
+
+<!-- ─── + · SUBAGENTE NUM PROJETO EM PRODUÇÃO ─── -->
+<div class="slide" data-title="Subagente num projeto em produção">
+<div class="slide-inner slide-scroll">
+  <span class="otag">o que mudou desde a última aula</span>
+  <h2 class="sec-title">Com o sistema no ar,<br>permissão de subagente<br>deixa de ser detalhe</h2>
+  <p class="lead">Um subagente roda comandos com as mesmas credenciais do principal. No repositório vazio, o pior erro era um arquivo ruim. Agora existe <strong style="color:var(--text)">dado real, deploy automático e um .env que pode apontar para produção</strong>.</p>
+  <div class="card" style="padding:6px;margin-bottom:16px;overflow-x:auto;"><table class="tbl">
+    <thead><tr><th>ação</th><th>principal</th><th>verificador</th><th>por quê</th></tr></thead><tbody>
+    <tr><td>ler código, spec, rules</td><td>✓</td><td>✓</td><td>é o trabalho dele</td></tr>
+    <tr><td>rodar testes e build</td><td>✓</td><td>✓, com sua aprovação</td><td>é a evidência — desde que <strong>não apontem para produção</strong></td></tr>
+    <tr><td>editar arquivo</td><td>✓</td><td>✗</td><td>quem corrige é o principal</td></tr>
+    <tr><td>commit e push</td><td>conforme operacao.md</td><td>✗</td><td>push publica na Vercel</td></tr>
+    <tr><td>migration, reset de banco</td><td>conforme migration.md</td><td>✗</td><td>o erro fica no dado</td></tr>
+    <tr><td>MCP do banco</td><td>só leitura</td><td>só leitura</td><td>a configuração impede, não só a regra</td></tr>
+  </tbody></table></div>
+  <div class="g2" style="align-items:start;">
+    <div><div class="filebox prompt"><div class="filebox-head"><span class="fb-path">prompt · antes da prática, confira o ambiente</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>Modo Ask. Não altere nada e não rode nenhum comando.
+
+Responda lendo o repositório:
+1. Para qual banco aponta o DATABASE_URL usado quando os testes
+   rodam nesta máquina? É o mesmo projeto Supabase do deploy na Vercel?
+2. Algum comando de rules/checks.md aplica migration, faz reset de
+   banco, push ou deploy?
+3. Algum MCP em .mcp.json tem escrita no banco de produção?
+
+Se qualquer resposta for &quot;sim&quot; ou &quot;não sei&quot;, diga qual arquivo
+precisa mudar antes de deixar um subagente rodar checks.</pre></div></div>
+    <div>
+      <div class="hsec star"><div class="hn">o risco mais concreto</div><div class="hd">Se o <code>.env.local</code> aponta para o mesmo Supabase do deploy, <strong>rodar a suíte de testes escreve em produção</strong>. Nenhum subagente deveria descobrir isso por você.</div></div>
+      <div class="hsec"><div class="hn">aprovação continua sua</div><div class="hd">Não coloque subagente em execução automática de comandos. O pedido de aprovação é o único ponto em que você vê o que ele vai fazer antes de acontecer.</div></div>
+      <div class="hsec ok"><div class="hn">nenhuma regra nova</div><div class="hd">restrictions, migration, secrets e operacao já cobrem — porque foram escritas sobre ação, não sobre quem age. O subagente <strong>herda o contrato</strong> quando o arquivo dele manda ler essas rules.</div></div>
+    </div>
+  </div>
+</div>
+</div>
+<!-- ─── 9 · PRÁTICA: USAR OU NÃO USAR? ─── -->
+<div class="slide" data-title="Prática: usar ou não usar?">
+<div class="slide-inner slide-scroll">
+  <span class="gtag">prática · em dupla</span>
+  <h2 class="sec-title">Subagente<br>ou agente principal?</h2>
+  <p class="lead">Todos os casos são do nosso sistema de empréstimo. Decidam em dupla antes de abrir — e justifiquem com o teste de uma frase.</p>
+  <div class="acc"><div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge aud-q">?</span><span class="acc-badge aud-v mk">usar</span>
+<span class="acc-q">Descobrir em quais arquivos a regra de &quot;máximo 3 itens por pessoa&quot; deveria morar, antes de escrever o plano.</span><span class="acc-tog">▼</span></div><div class="acc-body"><p>Muita leitura, resposta curta. A exploração é barulho que não precisa ficar na janela do principal.</p></div></div><div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge aud-q">?</span><span class="acc-badge aud-v mk">usar</span>
+<span class="acc-q">Verificar se a spec de empréstimo está pronta, depois que o próprio agente implementou tudo.</span><span class="acc-tog">▼</span></div><div class="acc-body"><p>O implementador tem viés. Um verificador com janela limpa lê o que está escrito, não o que foi pretendido.</p></div></div><div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge aud-q">?</span><span class="acc-badge aud-v wr">não usar</span>
+<span class="acc-q">Renomear uma variável em dois arquivos.</span><span class="acc-tog">▼</span></div><div class="acc-body"><p>Tarefa pequena e determinística. Delegar custa mais que fazer — e o resultado é o mesmo.</p></div></div><div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge aud-q">?</span><span class="acc-badge aud-v wr">não usar</span>
+<span class="acc-q">Implementar o service de empréstimo e, em seguida, a tela que usa esse service.</span><span class="acc-tog">▼</span></div><div class="acc-body"><p>A tela depende do contrato do service. Sequencial, com contexto compartilhado: é trabalho do principal.</p></div></div><div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge aud-q">?</span><span class="acc-badge aud-v mk">usar</span>
+<span class="acc-q">Revisar o plan.md contra os dois ADRs antes de você aprovar.</span><span class="acc-tog">▼</span></div><div class="acc-body"><p>Revisão independente do plano, por quem não o escreveu. Barato e pega desvio de stack cedo.</p></div></div><div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge aud-q">?</span><span class="acc-badge aud-v wr">não usar</span>
+<span class="acc-q">Ajustar a spec junto com você, discutindo o que o PRD deixou ambíguo.</span><span class="acc-tog">▼</span></div><div class="acc-body"><p>Exige a conversa inteira — e o subagente não vê a conversa. Decisão com o humano fica no principal.</p></div></div><div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge aud-q">?</span><span class="acc-badge aud-v ">talvez</span>
+<span class="acc-q">Implementar a tela de catálogo e a tela de Operações, que não compartilham arquivos.</span><span class="acc-tog">▼</span></div><div class="acc-body"><p>Independentes, podem ir em paralelo. Mas só vale se o harness isolar os arquivos (ou worktrees) e se vocês conseguirem revisar dois diffs ao mesmo tempo.</p></div></div></div>
+  <div class="g2" style="margin-top:14px;">
+    <div class="hsec ok"><div class="hn">bom sinal</div><div class="hd">Muita leitura e resposta curta · precisa de olhar independente · é independente de verdade · cabe em menos permissões que o principal.</div></div>
+    <div class="hsec star"><div class="hn">mau sinal</div><div class="hd">Precisa da conversa com você · depende do passo anterior · é pequeno · vai editar os mesmos arquivos que outro agente.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ─── 10 · SUBAGENTES DENTRO DO SDD ─── -->
+<div class="slide" data-title="Subagentes dentro do SDD">
+<div class="slide-inner slide-scroll">
+  <span class="tag">a disciplina é SDD</span>
+  <h2 class="sec-title">SDD já separa as etapas.<br>Subagente separa<br>quem faz cada uma.</h2>
+  <p class="lead">O ciclo da aula 7 tem fronteiras claras — spec, plano, tarefas, código, verificação — e cada fronteira produz um arquivo. <strong style="color:var(--text)">Arquivo é o handoff perfeito</strong>: o subagente não precisa da conversa, precisa do <code>spec.md</code>. É por isso que SDD e subagentes combinam tão bem.</p>
+  <div class="sddm anim"><div class="sm-h"></div><div class="sm-h">spec</div><div class="sm-h">plano</div><div class="sm-h">tarefas</div><div class="sm-h">código</div><div class="sm-h">verificação</div><div class="sm-r sm-o ai" style="--d:0.10s">explorador <span style="font-size:.62rem;color:var(--muted)">(pronto)</span></div><div class="sm-c ai on sm-o" style="--d:0.14s">lê código e banco, devolve o que existe</div><div class="sm-c ai on sm-o" style="--d:0.14s">confirma onde cada mudança cabe</div><div class="sm-c ai " style="--d:0.14s"></div><div class="sm-c ai " style="--d:0.14s"></div><div class="sm-c ai " style="--d:0.14s"></div><div class="sm-r sm-a ai" style="--d:0.24s">revisor</div><div class="sm-c ai " style="--d:0.28s"></div><div class="sm-c ai on sm-a" style="--d:0.28s">confere o plano contra os ADRs</div><div class="sm-c ai " style="--d:0.28s"></div><div class="sm-c ai on sm-a" style="--d:0.28s">revisa o diff antes do commit</div><div class="sm-c ai " style="--d:0.28s"></div><div class="sm-r sm-p ai" style="--d:0.38s">implementador</div><div class="sm-c ai " style="--d:0.42s"></div><div class="sm-c ai " style="--d:0.42s"></div><div class="sm-c ai on sm-p" style="--d:0.42s">tarefas independentes em paralelo</div><div class="sm-c ai on sm-p" style="--d:0.42s">executa uma tarefa isolada</div><div class="sm-c ai " style="--d:0.42s"></div><div class="sm-r sm-g ai" style="--d:0.52s">verificador</div><div class="sm-c ai " style="--d:0.56s"></div><div class="sm-c ai " style="--d:0.56s"></div><div class="sm-c ai " style="--d:0.56s"></div><div class="sm-c ai " style="--d:0.56s"></div><div class="sm-c ai on sm-g" style="--d:0.56s">confere CA a CA com janela limpa</div><div class="sm-r sm-w ai" style="--d:0.66s">principal</div><div class="sm-c ai on sm-w" style="--d:0.70s">conversa com você e escreve</div><div class="sm-c ai on sm-w" style="--d:0.70s">escreve e leva para aprovação</div><div class="sm-c ai on sm-w" style="--d:0.70s">quebra e ordena</div><div class="sm-c ai on sm-w" style="--d:0.70s">implementa o que é sequencial</div><div class="sm-c ai on sm-w" style="--d:0.70s">corrige o que voltou</div></div>
+  <div style="text-align:center;margin:12px 0;"><button class="replay" onclick="replay(this)">▸ rodar de novo</button></div>
+  <div class="g3">
+    <div class="hsec ok"><div class="hn">onde mais rende</div><div class="ht">Verificação</div><div class="hd">O CA escrito na spec vira o roteiro do verificador. Quem implementou não corrige a própria prova.</div></div>
+    <div class="hsec"><div class="hn">onde rende cedo</div><div class="ht">Spec e plano</div><div class="hd">Explorar antes de escrever e revisar antes de aprovar. Erro achado no plano é o mais barato.</div></div>
+    <div class="hsec star"><div class="hn">onde não entra</div><div class="ht">Decisão com você</div><div class="hd">Ambiguidade do PRD, aprovação de spec, escolha entre alternativas: <strong>principal e humano</strong>, sempre.</div></div>
+  </div>
+</div>
+</div>
+
+
+<!-- ─── + · UM EXEMPLO DO COMEÇO AO FIM ─── -->
+<div class="slide" data-title="Um exemplo do começo ao fim">
+<div class="slide-inner slide-scroll">
+  <span class="tag">onde ele é necessário · exemplo</span>
+  <h2 class="sec-title">A próxima feature do PRD,<br>do plano ao veredito</h2>
+  <p class="lead">Exemplo ilustrativo com a feature 3 do PRD — <strong style="color:var(--text)">solicitar empréstimo</strong> — e as quatro regras que Operações já decidiu. Repare em <strong style="color:var(--text)">quem faz cada passo</strong>.</p>
+  <div class="flwrap anim" style="margin-bottom:14px;">
+    <div class="flw ai" style="--d:.05s"><div class="flw-k" style="color:var(--text)">você + principal</div><div class="flw-t">Escrevem a spec <code>002-solicitar-emprestimo</code> com CA-01 (máximo 3 itens), CA-02 (quem tem atraso não pega outro), CA-03 (manutenção não aparece disponível) e CA-04 (prazo de 14 dias). Você aprova.</div></div>
+    <div class="flw ai" style="--d:.15s"><div class="flw-k">subagente pronto</div><div class="flw-t">Ao escrever o plano, o principal aciona sozinho o <strong>explorador do harness</strong> para descobrir onde ficam as regras de empréstimo. Volta um resumo com arquivo:linha; os 30 arquivos lidos não entram na janela do principal.</div></div>
+    <div class="flw ai" style="--d:.25s"><div class="flw-k" style="color:var(--text)">principal</div><div class="flw-t">Executa as tarefas, uma por vez, com os checks. Ao fim, a janela dele está cheia de implementação — e ele "lembra" de ter feito o CA-02.</div></div>
+    <div class="flw ai" style="--d:.35s"><div class="flw-k" style="color:var(--green)">verificador-spec</div><div class="flw-t">Você pergunta "está pronta?". O spec-flow exige a delegação. O verificador começa do zero, lê spec e testes e devolve: CA-01, CA-03 e CA-04 ATENDIDOS; <strong>CA-02 SEM TESTE</strong>. Veredito: <strong>NÃO PRONTA</strong>.</div></div>
+    <div class="flw ai" style="--d:.45s"><div class="flw-k" style="color:var(--text)">principal</div><div class="flw-t">Escreve o teste do CA-02. O teste falha: a comparação de "atraso" usava a data do navegador, não a do servidor. Corrige e <strong>delega a verificação de novo</strong>, com janela limpa.</div></div>
+    <div class="flw ai" style="--d:.55s"><div class="flw-k" style="color:var(--green)">verificador-spec</div><div class="flw-t">Veredito: PRONTA. Só agora a spec vai para a sua aprovação — e só depois disso, para o push que publica.</div></div>
+  </div>
+  <div style="text-align:center;margin-bottom:14px;"><button class="replay" onclick="replay(this)">▸ rodar de novo</button></div>
+  <div class="hsec star"><div class="hn">o ponto do exemplo</div><div class="ht">O bug só apareceu porque alguém que não "sabia" exigiu a prova.</div><div class="hd">O código do CA-02 existia e parecia certo. Sem o verificador, ele teria ido para produção com o bug de data — numa regra que bloqueia pessoas de pegar equipamento.</div></div>
+</div>
+</div>
+<!-- ─── 11 · ANATOMIA DE UM SUBAGENTE ─── -->
+<div class="slide" data-title="Anatomia de um subagente">
+<div class="slide-inner slide-scroll">
+  <span class="tag">o formato</span>
+  <h2 class="sec-title">Um arquivo .md:<br>frontmatter decide quando,<br>o corpo decide como</h2>
+  <p class="lead">Na maioria dos harness o formato é <strong style="color:var(--text)">markdown com frontmatter YAML</strong> (o Codex usa TOML com os mesmos campos — ver o fim da aula). O corpo não é uma instrução que o agente principal lê — é a <strong style="color:var(--text)">instrução de sistema do subagente</strong>, a primeira coisa na janela vazia dele.</p>
+  <div class="g2" style="align-items:start;">
+    <div><div class="filebox "><div class="filebox-head"><span class="fb-path">agents/&lt;nome&gt;.md · template</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>---
+name: &lt;nome-em-kebab-case&gt;            # igual ao nome do arquivo
+description: &lt;o que faz&gt;. Use quando &lt;momento do fluxo&gt;. Não use para
+  &lt;o que parece com isto mas não é&gt;.
+model: inherit                        # ou um modelo mais barato, se a tarefa permitir
+# readonly: true                      # extensão de alguns harness: só lê
+# tools: Read, Grep, Glob             # extensão de outros: lista de ferramentas
+---
+
+&lt;Quem você é, em uma frase. O que você NÃO faz.&gt;
+
+## O que você recebe
+&lt;as entradas obrigatórias. Se faltar, peça e pare.&gt;
+
+## Antes de começar
+&lt;os arquivos que ele precisa ler — ele não herda a conversa&gt;
+
+## Procedimento
+1. &lt;passo verificável&gt;
+
+## Proibições
+- &lt;o que ele nunca faz&gt;
+
+## Resposta
+&lt;formato fixo e curto — é a única coisa que volta para o principal&gt;</pre></div></div>
+    <div>
+      <div class="hsec"><div class="hn">name</div><div class="hd">Igual ao nome do arquivo, minúsculas e hífen.</div></div>
+      <div class="hsec ok"><div class="hn">description</div><div class="hd">É o gatilho, como na skill: o principal decide delegar lendo só isto. Diga <strong>em que momento do fluxo</strong> ele entra e o que ele não faz.</div></div>
+      <div class="hsec"><div class="hn">model</div><div class="hd"><code>inherit</code> usa o mesmo do principal. Explorador pode usar um mais rápido; verificador, em geral, merece o mesmo.</div></div>
+      <div class="hsec star"><div class="hn">permissões — extensão de cada harness</div><div class="hd">Uns usam <code>readonly: true</code>, outros uma lista em <code>tools</code>. Campo que o harness não conhece é ignorado — por isso <strong>a proibição também vai escrita no corpo</strong>.</div></div>
+      <div class="hsec"><div class="hn">onde fica</div><div class="hd"><code>agents/</code> na raiz, ao lado de <code>rules/</code> e <code>skills/</code>, com uma seção no AGENTS.md apontando para lá.</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ─── 12 · COMO ESCREVER UM BOM SUBAGENTE ─── -->
+<div class="slide" data-title="Como escrever um bom subagente">
+<div class="slide-inner slide-scroll">
+  <span class="tag">as regras que importam</span>
+  <h2 class="sec-title">Cinco seções,<br>cada uma resolve<br>uma falha conhecida</h2>
+  <div class="g2 anim" style="margin-bottom:14px;">
+    <div class="card ai" style="--d:.05s"><span class="ptag">um papel só</span><p class="cp">"Revisa, testa e corrige" são três subagentes — ou nenhum. Um papel, uma pergunta, uma saída.</p></div>
+    <div class="card ai" style="--d:.12s"><span class="ptag">entradas obrigatórias</span><p class="cp">Liste o que o principal precisa mandar e diga: <strong>se faltar, peça e pare</strong>. É a defesa contra o handoff ruim.</p></div>
+    <div class="card ai" style="--d:.19s"><span class="ptag">leitura explícita</span><p class="cp">Ele não herda a conversa e você não deve presumir que herda suas rules. <strong>Aponte</strong> para os arquivos que ele precisa ler — sem copiar o conteúdo.</p></div>
+    <div class="card ai" style="--d:.26s"><span class="ptag">proibições no corpo</span><p class="cp">Mesmo com <code>readonly</code> no frontmatter: escreva "não edite". Campo de permissão varia por harness; texto chega em todos.</p></div>
+    <div class="card ai" style="--d:.33s"><span class="ptag">saída em formato fixo</span><p class="cp">Tabela, veredito, uma linha por item. O principal (e você) precisa ler isso rápido — e o formato fixo torna comparável entre execuções.</p></div>
+    <div class="card ai" style="--d:.40s"><span class="ptag">sem segundo dono</span><p class="cp">O verificador aponta para <code>rules/checks.md</code>; não reescreve a lista de checks. Mesma régua de sempre.</p></div>
+  </div>
+</div>
+</div>
+
+<!-- ─── 13 · O CASO: VERIFICADOR DE SPEC ─── -->
+<div class="slide" data-title="O caso: verificador de spec">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum">mão na massa · o nosso subagente</span>
+  <h2 class="sec-title">O primeiro subagente<br>do projeto confere<br>a tela que já está no ar</h2>
+  <p class="lead">Das opções do slide de SDD, a que mais rende é a verificação. E vocês já têm um alvo real: <strong style="color:var(--text)">a spec da tela em produção</strong>. Quem disse que ela estava pronta foi o mesmo agente que a implementou. Daqui para frente, as próximas features do PRD — limite de 3 itens, bloqueio por atraso, manutenção fora do disponível — são exatamente o tipo de regra que <strong style="color:var(--text)">parece implementada e não está</strong>.</p>
+  <div class="flowrow anim" style="margin-bottom:16px;">
+    <div class="fr-step ai" style="--d:.05s"><b>1</b><span>principal implementa as tarefas</span></div><div class="fr-arrow ai" style="--d:.12s">→</div>
+    <div class="fr-step ai o" style="--d:.2s"><b>2</b><span>delega ao verificador-spec</span></div><div class="fr-arrow ai" style="--d:.28s">→</div>
+    <div class="fr-step ai" style="--d:.36s"><b>3</b><span>tabela CA a CA + veredito</span></div><div class="fr-arrow ai" style="--d:.44s">→</div>
+    <div class="fr-step ai g" style="--d:.52s"><b>4</b><span>PRONTA → você aprova · NÃO PRONTA → volta</span></div>
+  </div>
+  <div class="g3">
+    <div class="hsec ok"><div class="hn">por que este</div><div class="hd">Atende exatamente o custo 2 — contaminação. E usa o que já existe: CA com ID na spec, teste que cita o CA, checks.md.</div></div>
+    <div class="hsec ok"><div class="hn">por que é seguro começar por ele</div><div class="hd">Ele não edita nada. O pior caso é uma tabela errada, que você lê antes de aprovar.</div></div>
+    <div class="hsec star"><div class="hn">o que ele não faz</div><div class="hd">Não corrige. Se o verificador corrigisse, ele viraria o implementador — e voltaria a ter o viés que veio eliminar.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ─── 14 · O ARQUIVO DO VERIFICADOR ─── -->
+<div class="slide" data-title="O arquivo do verificador">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum g">mão na massa · criar o arquivo</span>
+  <h2 class="sec-title">agents/verificador-spec.md</h2>
+  <div class="g2" style="align-items:start;">
+    <div><div class="filebox "><div class="filebox-head"><span class="fb-path">agents/verificador-spec.md</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>---
+name: verificador-spec
+description: Verifica, com contexto limpo, se a implementação de uma spec atende a todos os critérios de aceite. Use depois que todas as tarefas de uma spec forem concluídas e antes de declarar a spec pronta, ou quando o usuário pedir verificação, conferência de CA ou revisão contra a spec. Não use para escrever código, corrigir teste ou revisar estilo.
+model: inherit
+---
+
+Você é o verificador de specs deste projeto. Você não escreveu o código
+que vai verificar e não vai corrigi-lo. Seu trabalho é dizer, com
+evidência, se a spec está pronta.
+
+## O que você recebe
+O agente principal precisa informar:
+- o caminho da spec: docs/specs/&lt;NNN-nome&gt;/spec.md
+- o que verificar: intervalo de commits, lista de arquivos, ou
+  "tudo que implementa esta spec" (para spec já em produção)
+Se faltar qualquer um dos dois, responda só pedindo o que falta e pare.
+
+## Antes de começar
+Você NÃO herda a conversa do agente principal. Leia, nesta ordem:
+AGENTS.md, rules/restrictions.md, rules/checks.md, rules/tests.md,
+e na pasta da spec: spec.md, plan.md, tasks.md.
+
+## Procedimento
+1. Liste todos os critérios de aceite da spec, com o ID de cada um.
+2. Para cada CA, procure a evidência: o teste cujo nome cita o ID do
+   CA (rules/tests.md) e o trecho de código que ele exercita.
+3. Rode os comandos de teste e build de rules/checks.md. NÃO rode
+   migration, reset de banco, push, deploy, nem nada que altere banco,
+   arquivo ou git. Se os testes apontarem para o banco de produção,
+   não rode: pare e avise.
+4. Confira o &quot;fora de escopo&quot; da spec: existe código fazendo algo que
+   a spec não pediu?
+
+## Proibições
+- Não edite nenhum arquivo. Não faça commit. Não escreva código.
+- Não aprove CA sem teste que o cite. &quot;Parece funcionar&quot; é REPROVADO.
+- Não interprete CA ambíguo: marque AMBÍGUO e diga o que falta decidir.
+
+## Resposta (só isto, nada antes nem depois)
+| CA | evidência (arquivo:linha do teste) | status | observação |
+status: ATENDIDO · REPROVADO · SEM TESTE · AMBÍGUO · OUTRO REPOSITÓRIO
+(OUTRO REPOSITÓRIO = a prova deste CA vive no back ou no front que não
+está aberto aqui; não conta como falha, mas precisa ser verificado lá)
+
+Checks: &lt;comando&gt; → passou | falhou      (uma linha por comando)
+Fora de escopo: &lt;lista&gt; | nada encontrado
+Veredito: PRONTA | NÃO PRONTA — &lt;motivo em uma frase&gt;
+</pre></div></div>
+    <div>
+      <div class="hsec ok"><div class="hn">description</div><div class="hd">Diz o <strong>momento</strong> (depois das tarefas, antes de pronto) e o que ele não faz. É o que permite o principal delegar sem você pedir.</div></div>
+      <div class="hsec ok"><div class="hn">entradas</div><div class="hd">Spec e o que mudou. Sem isso ele não sabe o que verificar — então pede e para.</div></div>
+      <div class="hsec ok"><div class="hn">leitura</div><div class="hd">Aponta para AGENTS.md, restrictions, checks e tests. Não copia nada delas.</div></div>
+      <div class="hsec star"><div class="hn">"parece funcionar" é REPROVADO</div><div class="hd">A regra que separa verificação de opinião: <strong>sem teste citando o CA, não há evidência</strong>. Vem direto da tests.md.</div></div>
+      <div class="hsec"><div class="hn">AMBÍGUO</div><div class="hd">Se o CA não permite dizer sim ou não, ele não decide por você — devolve a pergunta. É o restrictions.md funcionando dentro do subagente.</div></div>
+      <div class="hsec"><div class="hn">sem readonly no frontmatter</div><div class="hd">Ele precisa rodar os comandos de checks. Em alguns harness, "somente leitura" também bloqueia terminal — por isso a proibição de editar está no corpo, e a aprovação de cada comando continua com você.</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ─── + · ONDE O VERIFICADOR MORA EM CADA TURMA ─── -->
+<div class="slide" data-title="Onde o verificador mora em cada turma">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum">mão na massa · as duas arquiteturas</span>
+  <h2 class="sec-title">Um repositório ou dois —<br>muda quantas vezes<br>a verificação roda</h2>
+  <p class="lead">O arquivo do verificador é o mesmo nas duas turmas. O que muda é <strong style="color:var(--text)">o que ele consegue enxergar</strong>: um subagente só lê o repositório em que foi aberto.</p>
+  <div class="vtabs"><button class="vtab on" onclick="vt(this,'ar1')">tRPC · monolito</button><button class="vtab" onclick="vt(this,'ar2')">REST · back e front</button></div>
+  <div class="vpane on" id="ar1">
+    <div class="g2" style="align-items:start;">
+      <div><div class="filebox "><div class="filebox-head"><span class="fb-path">estrutura e delegação · monolito</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>&lt;monolito-trpc&gt;/
+├── AGENTS.md
+├── rules/  skills/  .mcp.json
+├── docs/specs/&lt;NNN-nome&gt;/spec.md
+└── agents/
+    └── verificador-spec.md     ← um só, enxerga procedures e telas
+
+# delegação
+Use o subagente verificador-spec.
+Spec: docs/specs/&lt;NNN-nome&gt;/spec.md
+O que verificar: tudo que implementa esta spec</pre></div></div>
+      <div>
+        <div class="hsec ok"><div class="hn">o caso simples</div><div class="hd">Spec, procedures, telas e testes no mesmo repositório. <strong>Uma delegação, uma tabela.</strong> O status OUTRO REPOSITÓRIO nunca deveria aparecer — se aparecer, a spec está citando algo que não existe aqui.</div></div>
+        <div class="hsec"><div class="hn">atenção</div><div class="hd">Teste de procedure e teste de tela podem ter comandos diferentes. Os dois precisam estar em <code>rules/checks.md</code>, ou o verificador roda só metade.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="vpane" id="ar2">
+    <div class="g2" style="align-items:start;">
+      <div><div class="filebox "><div class="filebox-head"><span class="fb-path">estrutura · back e front separados</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>&lt;back-nest&gt;/                         &lt;front-next&gt;/
+├── AGENTS.md                        ├── AGENTS.md
+├── rules/  skills/  .mcp.json       ├── rules/  skills/
+├── docs/specs/&lt;NNN-nome&gt;/spec.md    ├── docs/specs/&lt;NNN-nome&gt;/spec.md
+└── agents/                          └── agents/
+    └── verificador-spec.md              └── verificador-spec.md
+
+# a mesma spec nos dois lados (ou um link para o repositório que é dono dela)
+# cada CA diz de que lado está a prova:
+#   CA-01 [back]   no máximo 3 itens por pessoa
+#   CA-05 [front]  item em manutenção aparece como indisponível no catálogo
+# rode o verificador em CADA repositório e junte as duas tabelas</pre></div></div>
+      <div>
+        <div class="hsec ok"><div class="hn">o lado de cada CA</div><div class="hd">Marquem na spec, ao lado de cada critério, <code>[back]</code> ou <code>[front]</code>. É uma linha por CA e resolve a dúvida de onde procurar a prova.</div></div>
+        <div class="hsec ok"><div class="hn">duas rodadas, uma decisão</div><div class="hd">O verificador do back marca os CA de front como OUTRO REPOSITÓRIO, e vice-versa. A spec só está PRONTA quando <strong>as duas tabelas, juntas</strong>, não têm REPROVADO nem SEM TESTE.</div></div>
+        <div class="hsec star"><div class="hn">a alternativa</div><div class="hd">Alguns harness abrem os dois repositórios num mesmo workspace, e aí um verificador só enxerga tudo. Funciona — mas confira se os dois <code>AGENTS.md</code> não se contradizem antes.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<!-- ─── 15 · LIGANDO AO FLUXO DE SDD ─── -->
+<div class="slide" data-title="Ligando ao fluxo de SDD">
+<div class="slide-inner slide-scroll">
+  <span class="stepnum g">mão na massa · conectar</span>
+  <h2 class="sec-title">Três pontos de contato —<br>cada um com um dono só</h2>
+  <p class="lead">O arquivo do subagente sozinho não muda o fluxo. Ele precisa ser <strong style="color:var(--text)">encontrado</strong> (AGENTS.md), <strong style="color:var(--text)">exigido</strong> (spec-flow) e <strong style="color:var(--text)">chamado direito</strong> (prompt de delegação).</p>
+  <div class="g2" style="align-items:start;">
+    <div><div class="filebox "><div class="filebox-head"><span class="fb-path">AGENTS.md · acrescente esta seção</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>## Subagentes
+- Ficam em agents/&lt;nome&gt;.md. O frontmatter diz quando delegar; o
+  corpo é a instrução completa do subagente.
+- Subagente não herda esta conversa: ao delegar, passe tudo que o
+  arquivo dele pede como entrada.
+- Se o harness não tiver subagentes, abra uma sessão nova e comece
+  com: &quot;Aja conforme agents/&lt;nome&gt;.md.&quot; e as entradas pedidas.</pre></div><div class="filebox "><div class="filebox-head"><span class="fb-path">rules/spec-flow.md · acrescente ao final</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>## Antes de declarar uma spec pronta
+- Delegue ao subagente verificador-spec (agents/verificador-spec.md),
+  passando o caminho da spec e o intervalo de commits.
+- A spec só é pronta com &quot;Veredito: PRONTA&quot;. Qualquer outro resultado
+  volta para as tarefas — quem corrige é o agente principal, nunca o
+  verificador.</pre></div></div>
+    <div><div class="filebox prompt"><div class="filebox-head"><span class="fb-path">prompt · delegação explícita (quando você quer pedir)</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>Use o subagente verificador-spec.
+
+Spec: docs/specs/&lt;NNN-nome&gt;/spec.md
+O que mudou: commits &lt;primeiro&gt;..&lt;último&gt;  (ou: git diff main --stat)
+
+Devolva a tabela do verificador sem alterar nada. Depois, sem corrigir,
+me diga quais tarefas precisariam voltar.</pre></div>
+      <div class="hsec"><div class="hn">por que no spec-flow e não no checks</div><div class="hd"><code>checks.md</code> vale para cada tarefa. A verificação contra a spec acontece <strong>uma vez, no fim da spec</strong> — o ciclo de vida da spec é dono do spec-flow.</div></div>
+      <div class="hsec star"><div class="hn">quem corrige</div><div class="hd">A linha "quem corrige é o principal" fecha a porta para o atalho mais tentador: o verificador achar o problema e já resolver.</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ─── 16 · PRÁTICA: PROVOCAR O SUBAGENTE ─── -->
+<div class="slide" data-title="Prática: provocar o subagente">
+<div class="slide-inner slide-scroll">
+  <span class="gtag">prática · sessão nova em cada teste</span>
+  <h2 class="sec-title">Quatro provas na tela<br>que já está no ar —<br>a terceira é a que importa</h2>
+  <div class="warnbox" style="margin:0 0 14px;"><div class="wh">antes do teste 2</div><p>Rode o prompt de conferência do slide <strong>"Subagente num projeto em produção"</strong>. Se a suíte de testes aponta para o banco do deploy, resolva isso primeiro — o verificador vai pedir para rodar os testes.</p></div>
+  <div class="acc">
+    <div class="acc-item open"><div class="acc-head" onclick="ac(this)"><span class="acc-badge">teste 1</span><span class="acc-q">Ele enxerga o subagente?</span><span class="acc-mode">💬 Ask</span><span class="acc-tog">▼</span></div>
+    <div class="acc-body"><div class="filebox prompt"><div class="filebox-head"><span class="fb-path">prompt</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>Liste os subagentes que você enxerga neste projeto, com o caminho
+e a description de cada um. Não delegue nada agora.</pre></div><p>Não aparece? Falta a seção no AGENTS.md, ou o seu harness procura em outra pasta (ver a observação no fim da aula).</p></div></div>
+    <div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge mk">teste 2</span><span class="acc-q">Ele delega sem você mandar?</span><span class="acc-mode">🤖 agente</span><span class="acc-tog">▼</span></div>
+    <div class="acc-body"><div class="filebox prompt"><div class="filebox-head"><span class="fb-path">provocação</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>A spec docs/specs/&lt;NNN-da-tela-em-produção&gt;/ já foi implementada e
+está no ar. Ela está pronta de verdade?</pre></div>
+    <div class="expected"><div class="ex-h">esperado</div><ul>
+      <li>O principal <strong>delega ao verificador-spec</strong> — pela description e pela linha do spec-flow — passando a spec e o que mudou.</li>
+      <li>Volta a tabela no formato fixo. Se ele respondeu "sim, está pronta" sem delegar, a description ou o spec-flow não pegaram.</li>
+      <li><strong>Já voltou algo SEM TESTE?</strong> Ótimo: é um achado real numa tela que está em produção. Se <em>tudo</em> voltar SEM TESTE, o problema não é o verificador — os testes não citam o CA, como pede a <code>rules/tests.md</code>.</li>
+    </ul></div></div></div>
+    <div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge wr">teste 3</span><span class="acc-q">Ele pega um CA sem prova?</span><span class="acc-mode">🤖 agente</span><span class="acc-tog">▼</span></div>
+    <div class="acc-body"><div class="filebox prompt"><div class="filebox-head"><span class="fb-path">erro plantado</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>Comente (não apague) o teste de um dos CAs da spec
+docs/specs/&lt;NNN-da-tela-em-produção&gt;/ — escolha o CA em que você
+mais confia — e me diga se a spec está pronta.</pre></div>
+    <p><strong>Esperado:</strong> o CA escolhido aparece como <strong>SEM TESTE</strong> e o veredito é <strong>NÃO PRONTA</strong>. Se ele aprovar porque "o código tem a verificação", o subagente está opinando em vez de verificar — releia a proibição sobre "parece funcionar". Depois do teste, descomente o teste de volta.</p></div></div>
+    <div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge wr">teste 4</span><span class="acc-q">O verificador fica fora da correção?</span><span class="acc-mode">🤖 agente</span><span class="acc-tog">▼</span></div>
+    <div class="acc-body"><div class="filebox prompt"><div class="filebox-head"><span class="fb-path">provocação</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>O verificador achou o problema — pede para ele mesmo corrigir,
+é mais rápido.</pre></div>
+    <p><strong>Esperado:</strong> o principal recusa e cita o spec-flow — quem corrige é ele, e depois delega a verificação de novo, com janela limpa.</p></div></div>
+  </div>
+  <div class="hero-q" style="max-width:980px;margin-top:14px;">💭 Sem subagente no seu harness? Rode os testes 2 a 4 com o plano B: <strong style="font-style:normal;color:var(--text)">sessão nova</strong>, começando por "Aja conforme agents/verificador-spec.md" e as duas entradas.</div>
+</div>
+</div>
+
+<!-- ─── 17 · SUGESTÕES DE OUTROS SUBAGENTES ─── -->
+<div class="slide" data-title="Sugestões de outros subagentes">
+<div class="slide-inner slide-scroll">
+  <span class="gtag">sugestões · não é receita</span>
+  <h2 class="sec-title">O explorador é essencial —<br>e por isso vocês<br>não vão escrevê-lo</h2>
+  <p class="lead">Depois que o verificador estiver funcionando, cada time pode avaliar o próximo. A regra para acrescentar um: <strong style="color:var(--text)">nomear o erro concreto que ele evita</strong> — e conferir antes se o harness já não entrega pronto.</p>
+  <div class="card" style="margin-bottom:16px;border-color:rgba(0,229,255,.35);">
+    <span class="tag" style="margin-bottom:8px;">explorador-codigo · já vem pronto no harness</span>
+    <div class="g2" style="align-items:start;">
+      <p class="cp">Provavelmente o subagente mais importante e mais usado de todos. Antes da spec ou do plano, ele varre o código — e o banco, se houver MCP — e devolve <strong>o que existe e onde</strong>: arquivo:linha, padrões, tabelas. Muita leitura, resposta curta: o caso perfeito de janela limpa.</p>
+      <p class="cp"><strong>Não vamos implementar</strong> porque os principais harness já trazem um subagente de exploração pronto, só leitura e com modelo mais rápido, que o agente principal aciona sozinho quando precisa varrer o repositório. Escrever o nosso seria criar o <strong>segundo dono</strong> de algo que já funciona. O que vale é reconhecê-lo quando ele aparecer no chat — e pedir por ele quando quiser: <em>"explore o código antes de escrever o plano"</em>.</p>
+    </div>
+  </div>
+  <div class="acc"><div class="acc-item open"><div class="acc-head" onclick="ac(this)"><span class="acc-badge mk">plano</span><span class="acc-q" style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;">revisor-plano <span style="color:var(--green);font-family:'IBM Plex Sans',sans-serif;font-size:.78rem;">· o próximo recomendado</span></span><span class="acc-tog">▼</span></div>
+<div class="acc-body"><p><strong>Quando entra:</strong> Depois de o principal escrever o plan.md e antes de você aprovar: conferir o plano contra os dois ADRs, contra o restrictions e contra o &quot;fora de escopo&quot; da spec.</p><p><strong>Como seria:</strong> Não edita. Devolve cada divergência com a linha do plano e a linha do ADR que ela contraria. Mesmo molde do verificador: lê os arquivos da etapa, responde em formato fixo.</p><p><strong>Erro que ele evita:</strong> um plano que propõe biblioteca fora do ADR-001, ou componente fora do ADR-002, aprovado sem ninguém perceber — e virando dezenas de linhas de código para desfazer.</p></div></div><div class="acc-item"><div class="acc-head" onclick="ac(this)"><span class="acc-badge">código</span><span class="acc-q" style="font-family:'IBM Plex Mono',monospace;font-size:.85rem;">revisor-design</span><span class="acc-tog">▼</span></div>
+<div class="acc-body"><p><strong>Quando entra:</strong> Antes do commit: revisar o diff com a skill de SOLID — sem ter visto o diff ser escrito.</p><p><strong>Como seria:</strong> Não edita. Usa a skill em vez de repetir princípios no próprio arquivo.</p></div></div></div>
+  <div class="hsec ok" style="margin-top:14px;"><div class="hn">por que o revisor-plano vem antes</div><div class="hd">No ciclo de SDD, o plano é a última fronteira antes do código. Desvio pego no plan.md custa <strong>uma linha para corrigir</strong>; pego depois da implementação, custa refazer tarefas. Verificador no fim, revisor de plano no meio: as duas pontas mais caras do ciclo ficam cobertas.</div></div>
+  <div class="warnbox"><div class="wh">resista ao organograma</div><p>A tentação depois desta aula é desenhar um "time" — PM, arquiteto, dev, QA, revisor. Cada fronteira nova é um handoff que pode perder informação e uma leitura de contexto a mais. <strong>Um subagente que funciona vale mais que cinco que ninguém conferiu.</strong></p></div>
+</div>
+</div>
+
+<!-- ─── + · O CICLO SDD COMPLETO ─── -->
+<div class="slide" data-title="O ciclo SDD completo">
+<div class="slide-inner slide-scroll">
+  <span class="tag">fechando o ciclo de SDD</span>
+  <h2 class="sec-title">Do PRD à produção:<br>cada etapa com um arquivo,<br>uma regra e um dono</h2>
+  <p class="lead">Com o subagente, o ciclo das aulas 4 a 11 está completo. Cada linha abaixo é algo que vocês já têm no repositório — e nenhuma etapa depende de alguém lembrar de fazer.</p>
+  <div class="card" style="padding:6px;margin-bottom:16px;overflow-x:auto;"><table class="tbl">
+    <thead><tr><th>etapa</th><th>o arquivo que nasce</th><th>o que restringe</th><th>quem faz</th></tr></thead><tbody><tr><td><strong>intenção</strong></td><td><code>PRD</code></td><td>—</td><td>você e o negócio</td></tr><tr><td><strong>decisão</strong></td><td><code>ADR</code></td><td>rules/restrictions</td><td>você; o agente propõe e para</td></tr><tr><td><strong>requisito</strong></td><td><code>spec.md com CA</code></td><td>spec-flow · PRD</td><td>você + principal; MCP confirma o real</td></tr><tr><td><strong>plano</strong></td><td><code>plan.md</code></td><td>ADRs · skills citadas</td><td>principal; explorador do harness; revisor-plano (sugestão)</td></tr><tr><td><strong>tarefas</strong></td><td><code>tasks.md</code></td><td>spec-flow · checks</td><td>principal</td></tr><tr><td><strong>código</strong></td><td><code>diff + testes que citam o CA</code></td><td>migration · secrets · tests · skills</td><td>principal</td></tr><tr><td><strong>verificação</strong></td><td><code>tabela CA a CA</code></td><td>spec-flow · checks</td><td>verificador-spec</td></tr><tr><td><strong>publicação</strong></td><td><code>push → Vercel</code></td><td>operacao · restrictions</td><td>você</td></tr><tr><td><strong>continuidade</strong></td><td><code>handoff.md</code></td><td>handoff</td><td>principal</td></tr></tbody></table></div>
+  <div class="g2">
+    <div class="hsec ok"><div class="hn">o que segura o ciclo</div><div class="hd">A passagem de uma etapa para a outra é <strong>um arquivo</strong>, não a memória de uma conversa. É por isso que dá para trocar de sessão, de modelo, de colega — ou entregar uma etapa a um subagente.</div></div>
+    <div class="hsec star"><div class="hn">o ciclo não termina no deploy</div><div class="hd">A próxima mudança na tela que está no ar — um bug, um pedido de Operações — <strong>começa pela spec</strong>, não pelo código. Spec que não acompanha o sistema em produção vira documentação mentirosa.</div></div>
+  </div>
+</div>
+</div>
+<!-- ─── 18 · FECHAMENTO ─── -->
+<div class="slide" data-title="Fechamento">
+<div class="slide-inner slide-scroll">
+  <span class="tag">antes de fechar o notebook</span>
+  <h2 class="sec-title">Quem implementa<br>não corrige a própria prova</h2>
+  <div class="g2" style="align-items:start;">
+    <div><div class="filebox "><div class="filebox-head"><span class="fb-path">estrutura esperada</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>&lt;projeto&gt;/
+├── AGENTS.md            ← + seção Subagentes
+├── .mcp.json
+├── docs/                ← PRD, adr/, specs/
+├── rules/
+│   └── spec-flow.md     ← + &quot;antes de declarar uma spec pronta&quot;
+├── skills/
+└── agents/
+    └── verificador-spec.md</pre></div><div class="filebox "><div class="filebox-head"><span class="fb-path">terminal · commit de fechamento</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre>git add agents/ AGENTS.md rules/spec-flow.md
+git commit -m &quot;chore: subagente verificador-spec no fluxo de SDD&quot;
+git log --oneline</pre></div></div>
+    <div><div class="checklist" style="grid-template-columns:1fr;"><div class="chk" onclick="tk(this)"><span class="box"></span><span>agents/verificador-spec.md criado, com name igual ao nome do arquivo</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>AGENTS.md tem a seção Subagentes, com o plano B para harness sem suporte</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>rules/spec-flow.md exige o verificador antes de declarar a spec pronta</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>A suíte de testes não aponta para o banco de produção</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Teste 2: o principal delegou sem ser mandado — na spec da tela em produção</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Na turma REST: verificador rodado no back e no front, tabelas juntadas</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Teste 3: o CA sem teste voltou como SEM TESTE e veredito NÃO PRONTA</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>O teste comentado no teste 3 foi restaurado</span></div><div class="chk" onclick="tk(this)"><span class="box"></span><span>Teste 4: o verificador não corrigiu nada</span></div></div></div>
+  </div>
+  <div class="g2" style="margin-top:16px;">
+    <div class="hsec ok"><div class="hn">o que fica de hoje</div><div class="ht">Subagente separa contexto. Só use quando separar ajuda.</div><div class="hd">Janela limpa para trabalho barulhento, olhar sem viés para verificar, paralelo só quando é independente de verdade. E em SDD, <strong>o arquivo da etapa é o handoff</strong>.</div></div>
+    <div class="hsec"><div class="hn">próxima aula</div><div class="ht">Avaliar o nosso agente</div><div class="hd">Rules, skills, MCP, subagente: ficou melhor mesmo? A tabela do verificador é o primeiro dado objetivo que vocês têm — e é por ela que a avaliação começa.</div></div>
+  </div>
+  <div class="warnbox" style="border-left-color:var(--cyan);border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.05);">
+    <div class="wh" style="color:var(--cyan);">observação · onde cada harness procura</div>
+    <p><strong>Claude Code:</strong> <code>.claude/agents/</code>, o mesmo arquivo .md. <strong>Cursor:</strong> <code>.cursor/agents/</code> (assim como <code>.cursor/rules/</code> e <code>.cursor/skills/</code>), o mesmo .md, e aceita <code>readonly: true</code>; ele também lê <code>.claude/agents/</code> e <code>.codex/agents/</code>, então mantenha <strong>uma cópia só</strong>. <strong>Codex:</strong> <code>.codex/agents/</code> em <strong>TOML</strong> — o frontmatter vira campos e o corpo vai em <code>developer_instructions</code>. Em qualquer caso, a fonte continua sendo <code>agents/verificador-spec.md</code>: a cópia do harness é derivada dela.</p>
+    <div style="margin-top:10px;"><div class="filebox "><div class="filebox-head"><span class="fb-path">.codex/agents/verificador-spec.toml · para quem usa Codex</span><button class="copybtn" onclick="cp(this)">copiar</button></div><pre># .codex/agents/verificador-spec.toml
+name = &quot;verificador-spec&quot;
+description = &quot;Verifica, com contexto limpo, se a implementação de uma spec atende a todos os critérios de aceite. Use antes de declarar uma spec pronta. Não use para escrever código ou corrigir teste.&quot;
+developer_instructions = &quot;&quot;&quot;
+&lt;cole aqui o corpo de agents/verificador-spec.md, do
+&quot;Você é o verificador de specs&quot; até o fim&gt;
+&quot;&quot;&quot;</pre></div></div>
+  </div>
+</div>
+</div>
+</div>
+<script>
+// ══════════════════════════ BG CANVAS ══════════════════════════
+const bgCanvas = document.getElementById('bg');
+const bgCtx = bgCanvas.getContext('2d');
+let BW, BH, nodes = [];
+function resizeBg() { BW = bgCanvas.width = window.innerWidth; BH = bgCanvas.height = window.innerHeight; }
+resizeBg(); window.addEventListener('resize', () => { resizeBg(); initNodes(); });
+function initNodes() {
+  nodes = [];
+  const n = Math.floor((BW * BH) / 18000);
+  for (let i = 0; i < n; i++) nodes.push({ x:Math.random()*BW, y:Math.random()*BH, vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.4, r:Math.random()*2+1 });
+}
+initNodes();
+function drawBg() {
+  bgCtx.clearRect(0, 0, BW, BH);
+  nodes.forEach(n => { n.x += n.vx; n.y += n.vy; if(n.x<0||n.x>BW)n.vx*=-1; if(n.y<0||n.y>BH)n.vy*=-1; });
+  for (let i = 0; i < nodes.length; i++) for (let j = i+1; j < nodes.length; j++) {
+    const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y, d=Math.sqrt(dx*dx+dy*dy);
+    if (d < 120) { bgCtx.beginPath(); bgCtx.moveTo(nodes[i].x,nodes[i].y); bgCtx.lineTo(nodes[j].x,nodes[j].y); bgCtx.strokeStyle='rgba(124,58,237,'+(.15*(1-d/120))+')'; bgCtx.lineWidth=.5; bgCtx.stroke(); }
+  }
+  nodes.forEach(n => { bgCtx.beginPath(); bgCtx.arc(n.x,n.y,n.r,0,Math.PI*2); bgCtx.fillStyle='rgba(0,229,255,.5)'; bgCtx.fill(); });
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+// ══════════════════════════ SLIDE ENGINE ══════════════════════════
+const slideEls = Array.from(document.querySelectorAll('.slide'));
+const TOTAL = slideEls.length;
+let current = 0;
+
+const progressBar = document.getElementById('progress-bar');
+const counter     = document.getElementById('slide-counter');
+const titleBar    = document.getElementById('slide-title-bar');
+const navPrev     = document.getElementById('nav-prev');
+const navNext     = document.getElementById('nav-next');
+const dotsEl      = document.getElementById('dots');
+
+slideEls.forEach((_, i) => {
+  const d = document.createElement('div'); d.className = 'dot'; d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+});
+
+function runAnims(slide) {
+  slide.querySelectorAll('.anim').forEach(box => {
+    box.classList.remove('run'); void box.offsetWidth; box.classList.add('run');
+  });
+}
+function goTo(n) {
+  if (n < 0 || n >= TOTAL) return;
+  slideEls.forEach((s, i) => {
+    s.classList.remove('active', 'prev');
+    if (i < n) s.classList.add('prev');
+    if (i !== n) s.querySelectorAll('.anim').forEach(b => b.classList.remove('run'));
+  });
+  slideEls[n].classList.add('active');
+  slideEls[n].scrollTop = 0;
+  const sc = slideEls[n].querySelector('.slide-scroll');
+  if (sc) sc.scrollTop = 0;
+  current = n; updateUI(); runAnims(slideEls[n]);
+}
+function updateUI() {
+  progressBar.style.width = ((current + 1) / TOTAL * 100) + '%';
+  counter.textContent = (current + 1) + ' / ' + TOTAL;
+  titleBar.textContent = slideEls[current].dataset.title || '';
+  navPrev.classList.toggle('disabled', current === 0);
+  navNext.classList.toggle('disabled', current === TOTAL - 1);
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i === current));
+}
+navPrev.onclick = () => goTo(current - 1);
+navNext.onclick = () => goTo(current + 1);
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
+});
+requestAnimationFrame(() => goTo(0));
+
+// ══════════════════════════ UTILITÁRIOS ══════════════════════════
+function cp(btn) {
+  const box = btn.closest('.filebox');
+  const txt = box.querySelector('pre').innerText;
+  navigator.clipboard.writeText(txt).then(() => {
+    btn.textContent = 'copiado ✓'; btn.classList.add('done');
+    setTimeout(() => { btn.textContent = 'copiar'; btn.classList.remove('done'); }, 1800);
+  }).catch(() => { btn.textContent = 'erro'; setTimeout(() => btn.textContent = 'copiar', 1500); });
+}
+function replay(btn) {
+  btn.closest('.slide-inner').querySelectorAll('.anim').forEach(box => {
+    box.classList.remove('run'); void box.offsetWidth; box.classList.add('run');
+  });
+}
+function tk(el) { el.classList.toggle('on'); }
+function ac(head) { head.parentElement.classList.toggle('open'); }
+
+
+function vt(btn, id) {
+  const card = btn.closest('.vtabs').parentElement;
+  btn.closest('.vtabs').querySelectorAll('.vtab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  card.querySelectorAll(':scope > .vpane, :scope > .chartbox > .vpane').forEach(p => p.classList.toggle('on', p.id === id));
+}
+const CTX = [
+  { w:[6,0,0],  t:'Só o <strong>nome e a description</strong> de cada skill entram. Três skills custam três linhas.' },
+  { w:[6,22,0], t:'O pedido casou com a description de uma skill: <strong>o corpo do SKILL.md dela entra</strong>. As outras continuam valendo uma linha cada.' },
+  { w:[6,22,14],t:'O SKILL.md mandou consultar uma referência: <strong>só agora references/&lt;tema&gt;.md entra</strong>. Mesmo no pico, carrega menos do que a skill inteira como regra — e a regra pagaria isso em toda mensagem, inclusive nas que não têm nada a ver com ela.' }
+];
+function ctxStep(i, btn) {
+  btn.closest('.vtabs').querySelectorAll('.vtab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  ['cx1','cx2','cx3'].forEach((id,k) => document.getElementById(id).style.width = CTX[i].w[k] + '%');
+  document.getElementById('ctxTxt').innerHTML = CTX[i].t;
+}
+function qzPick(btn, opt) {
+  const q = btn.closest('.qz');
+  if (q.classList.contains('done')) return;
+  const ok = q.dataset.ok;
+  q.querySelectorAll('.qzb').forEach(b => {
+    if (b.textContent === ok) b.classList.add('ok');
+  });
+  if (opt !== ok) btn.classList.add('no'); else q.dataset.hit = '1';
+  q.classList.add('done');
+  qzScore();
+}
+function qzScore() {
+  const all = document.querySelectorAll('.qz');
+  const hit = Array.from(all).filter(q => q.dataset.hit).length;
+  const done = Array.from(all).filter(q => q.classList.contains('done')).length;
+  document.getElementById('qzScore').textContent = hit + ' de ' + all.length + (done === all.length ? ' · fim' : '');
+}
+function qzReset() {
+  document.querySelectorAll('.qz').forEach(q => {
+    q.classList.remove('done'); delete q.dataset.hit;
+    q.querySelectorAll('.qzb').forEach(b => b.classList.remove('ok','no'));
+  });
+  qzScore();
+}
+function sit(btn, cor, nome) {
+  btn.closest('.vtabs').querySelectorAll('.vtab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  const g = document.getElementById('icgrid');
+  g.style.color = cor;
+  g.querySelectorAll('.ic-b').forEach(b => b.textContent = nome);
+}
+
+const SA = ["O principal lê a <code>description</code> de cada subagente — como faz com skills — e decide que esta parte do trabalho é de outro. Ou você pede explicitamente.", "O principal escreve um prompt para o subagente. <strong>Este prompt é um handoff</strong>: tudo que não estiver nele ou no arquivo do subagente, o subagente não sabe.", "Janela vazia. Ele começa pela instrução de <code>agents/&lt;nome&gt;.md</code> e lê o que ela manda: rules, spec, código.", "Só as que o arquivo e o harness permitem. Se ele é só leitura, nenhuma edição acontece, por mais que ele queira.", "Um bloco de texto, de preferência num formato fixo. É isso — e só isso — que entra na janela do principal.", "Com o resultado na mão, o principal continua: corrige, delega de novo ou leva para você aprovar. <strong>Quem responde para você continua sendo o principal.</strong>"];
+let saCur = 0;
+function saStep(i) {
+  saCur = i;
+  document.querySelectorAll('.sq-step').forEach((g, k) => { g.classList.toggle('on', k === i); g.classList.toggle('past', k < i); });
+  document.getElementById('saTxt').innerHTML = SA[i];
+  document.getElementById('saN').textContent = (i + 1) + ' / ' + SA.length;
+}
+const KX = [
+  { w:[0,0,78],  t:'A sessão começa leve: contexto do projeto e a spec. Sobra quase tudo para trabalhar.' },
+  { w:[52,0,26], t:'O próprio agente explorou: <strong>30 arquivos na janela</strong> pelo resto da sessão. Sobra pouco para implementar — e o que sobra disputa atenção com leitura que já não importa.' },
+  { w:[0,4,74],  t:'Um subagente explorou na janela dele e devolveu <strong>um resumo de cinco linhas</strong>. A janela do principal quase não mudou.' }
+];
+function cx2(i, btn) {
+  btn.closest('.vtabs').querySelectorAll('.vtab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  ['k1','k2','k3'].forEach((id,k) => document.getElementById(id).style.width = KX[i].w[k] + '%');
+  document.getElementById('kTxt').innerHTML = KX[i].t;
+}
+saStep(0);
+
+</script>
+</body>
+</html>
