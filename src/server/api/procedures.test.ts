@@ -208,6 +208,96 @@ describe("créditos das fotos (spec 004)", () => {
   });
 });
 
+describe("solicitar empréstimo (spec 004)", () => {
+  const DIA = 86_400_000;
+  const atrasado = (x: Awaited<ReturnType<typeof makeTenant>>, equipmentId: string, membershipId: string) =>
+    t.db.loan.create({
+      data: { tenantId: x.tenant.id, equipmentId, membershipId, loanedAt: new Date(Date.now() - 20 * DIA), dueAt: new Date(Date.now() - 6 * DIA) },
+    });
+
+  it("test_ca_41_so_item_disponivel_e_solicitado_manutencao_e_emprestado_sao_recusados_com_motivo", async () => {
+    const x = await makeTenant(t.db, "ca41");
+    const livre = x.equipment[0]!;
+    const emprestado = x.equipment[1]!;
+    await as(x.ops).loan.request({ patrimonio: emprestado.patrimonio });
+
+    expect((await as(x.ana).equipment.get({ patrimonio: livre.patrimonio })).request).toEqual({ allowed: true });
+    expect((await as(x.ana).equipment.get({ patrimonio: x.broken.patrimonio })).request).toEqual({ allowed: false, reason: "STATE" });
+    expect((await as(x.ana).equipment.get({ patrimonio: emprestado.patrimonio })).request).toEqual({ allowed: false, reason: "STATE" });
+    expect(await code(as(x.ana).loan.request({ patrimonio: x.broken.patrimonio }))).toBe("CONFLICT");
+    expect(await code(as(x.ana).loan.request({ patrimonio: emprestado.patrimonio }))).toBe("CONFLICT");
+    expect(await t.db.loan.count({ where: { membershipId: x.ana.id } })).toBe(0);
+  });
+
+  it("test_ca_42_pedido_cria_o_emprestimo_na_hora_com_14_dias_corridos_e_tira_o_item_do_disponivel", async () => {
+    const x = await makeTenant(t.db, "ca42");
+    const item = x.equipment[0]!;
+    const loan = await as(x.ana).loan.request({ patrimonio: item.patrimonio });
+    const row = await t.db.loan.findUniqueOrThrow({ where: { id: loan.id } });
+    expect(row.returnedAt).toBeNull();
+    expect((row.dueAt.getTime() - row.loanedAt.getTime()) / DIA).toBeCloseTo(14, 5); // corridos, não úteis
+    expect(Math.abs(row.loanedAt.getTime() - Date.now())).toBeLessThan(60_000); // na hora, sem aprovação
+    expect((await as(x.ana).equipment.get({ patrimonio: item.patrimonio })).state).toBe("loaned");
+    const livres = await as(x.ana).equipment.list({ onlyAvailable: true, limit: 60 });
+    expect(livres.items.map((i) => i.patrimonio)).not.toContain(item.patrimonio);
+  });
+
+  it("test_ca_43_com_3_em_aberto_o_4_e_recusado_e_o_motivo_chega_na_tela", async () => {
+    const x = await makeTenant(t.db, "ca43");
+    for (const e of x.equipment.slice(0, 3)) await as(x.ana).loan.request({ patrimonio: e.patrimonio });
+    const quarto = x.equipment[3]!;
+    const err = await as(x.ana).loan.request({ patrimonio: quarto.patrimonio }).catch((e: TRPCError) => e);
+    expect((err as TRPCError).code).toBe("PRECONDITION_FAILED");
+    expect((err as TRPCError).message).toBe("Limite de 3 itens atingido.");
+    expect((await as(x.ana).equipment.get({ patrimonio: quarto.patrimonio })).request).toEqual({ allowed: false, reason: "LIMIT" });
+    expect(await t.db.loan.count({ where: { membershipId: x.ana.id, returnedAt: null } })).toBe(3);
+  });
+
+  it("test_ca_44_atraso_bloqueia_e_vence_o_limite_quando_os_dois_valem", async () => {
+    const x = await makeTenant(t.db, "ca44");
+    await as(x.ana).loan.request({ patrimonio: x.equipment[1]!.patrimonio });
+    await as(x.ana).loan.request({ patrimonio: x.equipment[2]!.patrimonio });
+    await atrasado(x, x.equipment[0]!.id, x.ana.id); // 3 em aberto, 1 atrasado
+    const livre = await t.db.equipment.create({ data: { tenantId: x.tenant.id, patrimonio: "TI-9044", name: "Extra", category: "CABOS" } });
+    expect((await as(x.ana).equipment.get({ patrimonio: livre.patrimonio })).request).toEqual({ allowed: false, reason: "OVERDUE" });
+    const err = await as(x.ana).loan.request({ patrimonio: livre.patrimonio }).catch((e: TRPCError) => e);
+    expect((err as TRPCError).message).toBe("Bloqueado por atraso.");
+  });
+
+  it("test_ca_45_dois_pedidos_simultaneos_ao_mesmo_equipamento_criam_um_so_emprestimo", async () => {
+    const x = await makeTenant(t.db, "ca45");
+    const outra = await t.db.membership.create({
+      data: { tenantId: x.tenant.id, userId: crypto.randomUUID(), role: "COLABORADOR", name: "Outra", email: "outra45@x.test", department: "T" },
+    });
+    const item = x.equipment[0]!;
+    const resultados = await Promise.all([code(as(x.ana).loan.request({ patrimonio: item.patrimonio })), code(as(outra).loan.request({ patrimonio: item.patrimonio }))]);
+    expect(resultados.sort()).toEqual(["CONFLICT", "OK"]);
+    expect(await t.db.loan.count({ where: { equipmentId: item.id, returnedAt: null } })).toBe(1);
+  });
+
+  it("test_ca_46_meus_emprestimos_lista_so_os_em_aberto_cada_um_com_a_data_prevista", async () => {
+    const x = await makeTenant(t.db, "ca46");
+    const a1 = await as(x.ana).loan.request({ patrimonio: x.equipment[0]!.patrimonio });
+    await as(x.ana).loan.request({ patrimonio: x.equipment[1]!.patrimonio });
+    await as(x.ana).loan.return({ loanId: a1.id });
+    await as(x.ops).loan.request({ patrimonio: x.equipment[2]!.patrimonio }); // de outra pessoa
+    const mine = await as(x.ana).loan.mine();
+    expect(mine.open.map((o) => o.patrimonio)).toEqual([x.equipment[1]!.patrimonio]);
+    expect(mine.open[0]!.dueAt.getTime()).toBeGreaterThan(Date.now() + 13 * DIA);
+    expect(mine.history).toHaveLength(1);
+  });
+
+  it("test_ca_48_o_pedido_usa_o_tenant_da_sessao_item_de_outro_tenant_nao_e_visto_nem_pedido", async () => {
+    const x = await makeTenant(t.db, "ca48a");
+    const y = await makeTenant(t.db, "ca48b");
+    const dele = y.equipment[0]!.patrimonio;
+    expect(await code(as(x.ana).equipment.get({ patrimonio: dele }))).toBe("NOT_FOUND");
+    expect(await code(as(x.ana).loan.request({ patrimonio: dele }))).toBe("NOT_FOUND");
+    expect((await as(x.ana).equipment.list({ limit: 60 })).items.map((i) => i.patrimonio)).not.toContain(dele);
+    expect(await t.db.loan.count({ where: { tenantId: y.tenant.id } })).toBe(0);
+  });
+});
+
 describe("isolamento entre tenants (ADR-001: um caso por procedimento)", () => {
   it("test_tenant_equipment_list_nao_enxerga_o_outro", async () => {
     const mine = await as(a.ana).equipment.list({ limit: 60 });
